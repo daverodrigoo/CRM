@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import Navbar from '../components/Navbar';
 
 // Helper to get today's date in YYYY-MM-DD format (Local Timezone)
@@ -10,18 +11,30 @@ const getTodayDate = () => {
   return `${year}-${month}-${day}`;
 };
 
-// Initial Mock Data 
-const initialLeads = [
-  {
-    Lead_ID: 'CHIMES-00001', Date_Added: '2026-02-23', Business_Name: 'THIAN RODRIGUEZ',
-    Contact_Person_First_Name: 'Christian', Contact_Last_Name: 'Rodriguez', Contact_Person_Phone: '9171742492', Contact_Person_Email: '-',
-    Business_Owner_First_Name: '', Business_Owner_Last_Name: '', Business_Owner_Phone: '', Business_Owner_Email: '',
-    Business_Phone: '', Business_Email: '', Tab_Category: '', Solution_Needed: 'Website Improvement',
-    Website_Link: 'https://linktr.ee/thianrodriguezmnl', Industry: 'Fashion', Source: 'Facebook',
-    Social_Media: [''], 
-    Remarks: ''
-  }
-];
+// Helper to check for duplicates based on Lead_ID OR (Business_Name AND Industry)
+const checkIsDuplicate = (newLead, existingList) => {
+  return existingList.some(lead => {
+    const isIdMatch = newLead.Lead_ID && lead.Lead_ID === newLead.Lead_ID;
+    
+    const isNameMatch = (lead.Business_Name || '').trim().toLowerCase() === (newLead.Business_Name || '').trim().toLowerCase();
+    const isIndustryMatch = (lead.Industry || '').trim().toLowerCase() === (newLead.Industry || '').trim().toLowerCase();
+    const isNameAndIndustryMatch = isNameMatch && isIndustryMatch;
+    
+    return isIdMatch || isNameAndIndustryMatch;
+  });
+};
+
+// Helper to safely generate the next Lead ID by finding the highest existing ID number
+const generateNextId = (allLeads) => {
+  let maxId = 0;
+  allLeads.forEach(l => {
+    if (l.Lead_ID && l.Lead_ID.startsWith('CHIMES-')) {
+      const num = parseInt(l.Lead_ID.replace('CHIMES-', ''), 10);
+      if (!isNaN(num) && num > maxId) maxId = num;
+    }
+  });
+  return `CHIMES-${String(maxId + 1).padStart(5, '0')}`;
+};
 
 const emptyForm = {
   Lead_ID: '', Date_Added: '', Business_Name: '', 
@@ -134,15 +147,66 @@ const LeadForm = ({ formData, handleInputChange, handleSocialMediaChange, addSoc
 };
 
 export default function Leads() {
-  const [leads, setLeads] = useState(initialLeads);
+  const [leads, setLeads] = useState([]); 
+  const [searchTerm, setSearchTerm] = useState(''); 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [isEditMode, setIsEditMode] = useState(false);
-  
   const [errorMsg, setErrorMsg] = useState('');
+
+  // NEW: State for sorting
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const fetchLeads = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/api/leads');
+      
+      const formattedLeads = response.data.map(lead => {
+        const business = lead.business || {};
+        
+        return {
+          Lead_ID: lead.Lead_ID,
+          Date_Added: lead.Date_Added,
+          Source: lead.Source || '',
+          Tab_Category: lead.Tab_Category || '',
+          Solution_Needed: lead.Solution_Needed || '',
+          Remarks: lead.Remarks || '',
+          
+          Business_Name: business.Business_Name || '',
+          Industry: business.Industry || '',
+          Website_Link: business.Website_Link || '',
+          Contact_Person_First_Name: business.Contact_Person_First_Name || '',
+          Contact_Last_Name: business.Contact_Last_Name || '',
+          Contact_Person_Phone: business.Contact_Person_Phone || '',
+          Contact_Person_Email: business.Contact_Person_Email || '',
+          Business_Owner_First_Name: business.Business_Owner_First_Name || '',
+          Business_Owner_Last_Name: business.Business_Owner_Last_Name || '',
+          Business_Owner_Phone: business.Business_Owner_Phone || '',
+          Business_Owner_Email: business.Business_Owner_Email || '',
+          Business_Phone: business.Business_Phone || '',
+          Business_Email: business.Business_Email || '',
+
+          Social_Media: business.social_media && business.social_media.length > 0 
+            ? business.social_media.map(sm => sm.URL) 
+            : ['']
+        };
+      });
+      
+      setLeads(formattedLeads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      setErrorMsg("Failed to connect to the database. Please make sure the backend is running.");
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -179,15 +243,26 @@ export default function Leads() {
     return true;
   };
 
-  const handleSaveNew = (e) => {
+  const handleSaveNew = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const newLead = { ...formData, Lead_ID: `CHIMES-${String(leads.length + 1).padStart(5, '0')}` };
-    setLeads([...leads, newLead]);
-    setIsAddOpen(false);
-    setFormData(emptyForm);
-    setErrorMsg('');
+    if (checkIsDuplicate(formData, leads)) {
+      setErrorMsg('A lead with this Business Name and Industry already exists.');
+      return;
+    }
+
+    try {
+      const newLeadData = { ...formData, Lead_ID: generateNextId(leads) };
+      await axios.post('http://localhost:8000/api/leads', newLeadData);
+      fetchLeads(); 
+      setIsAddOpen(false);
+      setFormData(emptyForm);
+      setErrorMsg('');
+    } catch (error) {
+      console.error("Error saving lead:", error);
+      setErrorMsg("Failed to save lead to the database. Please try again.");
+    }
   };
 
   const openViewModal = (lead) => {
@@ -226,6 +301,171 @@ export default function Leads() {
     setErrorMsg('');
   };
 
+  const handleImportClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const { newLeads, skipped } = parseCSVToLeads(text, leads);
+      
+      if (newLeads.length > 0) {
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const lead of newLeads) {
+          try {
+            await axios.post('http://localhost:8000/api/leads', lead);
+            successCount++;
+          } catch (err) {
+            console.error("Failed to import lead:", lead.Lead_ID, err);
+            failCount++;
+          }
+        }
+        
+        fetchLeads();
+        alert(`Import complete!\nSuccessfully added: ${successCount}\nFailed to add: ${failCount}\nSkipped (Duplicates): ${skipped}`);
+      } else if (skipped > 0) {
+        alert(`No new leads imported. Skipped ${skipped} duplicate(s).`);
+      } else {
+        alert('No valid leads found in the CSV.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; 
+  };
+
+  const parseCSVToLeads = (text, currentLeads) => {
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    if (lines.length < 2) return { newLeads: [], skipped: 0 }; 
+    
+    const headers = lines[0].split(',').map(h => h.trim());
+    const newLeads = [];
+    let skippedCount = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = [];
+      let inQuotes = false;
+      let currentValue = '';
+      
+      for (let char of lines[i]) {
+        if (char === '"') inQuotes = !inQuotes;
+        else if (char === ',' && !inQuotes) {
+          values.push(currentValue.trim());
+          currentValue = '';
+        } else {
+          currentValue += char;
+        }
+      }
+      values.push(currentValue.trim());
+
+      const leadObj = { ...emptyForm }; 
+      
+      headers.forEach((header, index) => {
+        let val = values[index] || '';
+        if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+        
+        if (header === 'Lead_ID') return; 
+
+        if (header === 'Social_Media') {
+           leadObj[header] = val.split(';').map(s => s.trim()).filter(Boolean);
+           if (leadObj[header].length === 0) leadObj[header] = [''];
+        } else if (leadObj.hasOwnProperty(header)) {
+           leadObj[header] = val;
+        }
+      });
+
+      const isDuplicate = checkIsDuplicate(leadObj, [...currentLeads, ...newLeads]);
+      if (isDuplicate) {
+        skippedCount++;
+        continue;
+      }
+
+      leadObj.Lead_ID = generateNextId([...currentLeads, ...newLeads]);
+      
+      if (!leadObj.Date_Added) {
+        leadObj.Date_Added = getTodayDate();
+      }
+
+      newLeads.push(leadObj);
+    }
+    
+    return { newLeads, skipped: skippedCount };
+  };
+
+  // NEW: Handle Sort Logic
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Filter first, then sort
+  const filteredLeads = leads.filter((lead) => {
+    const searchLower = searchTerm.toLowerCase();
+    const socialMediaMatch = (lead.Social_Media || []).some(link => 
+      (link || '').toLowerCase().includes(searchLower)
+    );
+
+    return (
+      (lead.Lead_ID || '').toLowerCase().includes(searchLower) ||
+      (lead.Business_Name || '').toLowerCase().includes(searchLower) ||
+      (lead.Industry || '').toLowerCase().includes(searchLower) ||
+      (lead.Date_Added || '').toLowerCase().includes(searchLower) ||
+      (lead.Business_Owner_First_Name || '').toLowerCase().includes(searchLower) ||
+      (lead.Business_Owner_Last_Name || '').toLowerCase().includes(searchLower) ||
+      (lead.Business_Owner_Phone || '').toLowerCase().includes(searchLower) ||
+      (lead.Business_Owner_Email || '').toLowerCase().includes(searchLower) ||
+      (lead.Business_Phone || '').toLowerCase().includes(searchLower) ||
+      (lead.Business_Email || '').toLowerCase().includes(searchLower) ||
+      (lead.Contact_Person_First_Name || '').toLowerCase().includes(searchLower) ||
+      (lead.Contact_Last_Name || '').toLowerCase().includes(searchLower) ||
+      (lead.Contact_Person_Phone || '').toLowerCase().includes(searchLower) ||
+      (lead.Contact_Person_Email || '').toLowerCase().includes(searchLower) ||
+      (lead.Website_Link || '').toLowerCase().includes(searchLower) ||
+      (lead.Source || '').toLowerCase().includes(searchLower) ||
+      (lead.Tab_Category || '').toLowerCase().includes(searchLower) ||
+      (lead.Solution_Needed || '').toLowerCase().includes(searchLower) ||
+      (lead.Remarks || '').toLowerCase().includes(searchLower) ||
+      socialMediaMatch
+    );
+  });
+
+  // Apply Sorting
+  const sortedLeads = [...filteredLeads].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    
+    const valA = (a[sortConfig.key] || '').toLowerCase();
+    const valB = (b[sortConfig.key] || '').toLowerCase();
+
+    if (valA < valB) {
+      return sortConfig.direction === 'asc' ? -1 : 1;
+    }
+    if (valA > valB) {
+      return sortConfig.direction === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  // Helper to render the sort icon cleanly
+  const renderSortIcon = (columnKey) => {
+    const isActive = sortConfig.key === columnKey;
+    return (
+      <span className={`text-xs ml-1 ${isActive ? 'text-white' : 'text-white/50 hover:text-white transition-colors'}`}>
+        {isActive && sortConfig.direction === 'desc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -233,35 +473,108 @@ export default function Leads() {
       <main className="pt-28 px-8 pb-12 max-w-[96%] mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Leads Management</h1>
-          <button 
-            onClick={() => { 
-              setFormData({ ...emptyForm, Date_Added: getTodayDate() }); 
-              setIsAddOpen(true); 
-              setErrorMsg(''); 
-            }}
-            className="bg-[#7E3A99] hover:bg-[#19a828] text-white px-5 py-2 rounded-md font-medium transition-colors shadow-sm"
-          >
-            + Add Lead
-          </button>
+          
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Search leads..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7E3A99] focus:border-transparent text-sm w-64 shadow-sm"
+            />
+
+            <input 
+              type="file" 
+              accept=".csv" 
+              ref={fileInputRef} 
+              onChange={handleFileUpload} 
+              className="hidden" 
+            />
+            
+            <button 
+              onClick={handleImportClick}
+              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md font-medium transition-colors shadow-sm text-sm"
+            >
+              Import
+            </button>
+            
+            <button 
+              onClick={() => { 
+                setFormData({ ...emptyForm, Date_Added: getTodayDate() }); 
+                setIsAddOpen(true); 
+                setErrorMsg(''); 
+              }}
+              className="bg-[#7E3A99] hover:bg-[#19a828] text-white px-5 py-2 rounded-md font-medium transition-colors shadow-sm text-sm"
+            >
+              + Add Lead
+            </button>
+          </div>
         </div>
+
+        {errorMsg && errorMsg.includes('Failed to connect') && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded border border-red-300">
+            {errorMsg}
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
-            <thead className="bg-[#7E3A99] text-[#f8f7fa] font-semibold">
+            <thead className="bg-[#7E3A99] text-[#f8f7fa] font-semibold select-none">
               <tr>
-                <th className="px-6 py-4 whitespace-nowrap">Business Name</th>
-                <th className="px-6 py-4 whitespace-nowrap">Industry</th>
+                {/* SORTABLE: Business Name (Sorts by Lead_ID internally per your request) */}
+                <th 
+                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-[#6c3282] transition-colors"
+                  onClick={() => handleSort('Lead_ID')}
+                >
+                  <div className="flex items-center">
+                    Business Name {renderSortIcon('Lead_ID')}
+                  </div>
+                </th>
+
+                {/* SORTABLE: Industry */}
+                <th 
+                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-[#6c3282] transition-colors"
+                  onClick={() => handleSort('Industry')}
+                >
+                  <div className="flex items-center">
+                    Industry {renderSortIcon('Industry')}
+                  </div>
+                </th>
+
+                {/* SORTABLE: Tab Category */}
+                <th 
+                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-[#6c3282] transition-colors"
+                  onClick={() => handleSort('Tab_Category')}
+                >
+                  <div className="flex items-center">
+                    Tab Category {renderSortIcon('Tab_Category')}
+                  </div>
+                </th>
+
                 <th className="px-6 py-4 whitespace-nowrap">Business Owner Info</th>
                 <th className="px-6 py-4 whitespace-nowrap">Business Info</th>
                 <th className="px-6 py-4 whitespace-nowrap">Contact Person Info</th>
+                
+                {/* SORTABLE: Date Added */}
+                <th 
+                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-[#6c3282] transition-colors"
+                  onClick={() => handleSort('Date_Added')}
+                >
+                  <div className="flex items-center">
+                    Date Added {renderSortIcon('Date_Added')}
+                  </div>
+                </th>
+
                 <th className="px-6 py-4 text-center whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {leads.map((lead) => (
+              {/* Map over sortedLeads instead of filteredLeads */}
+              {sortedLeads.map((lead) => (
                 <tr key={lead.Lead_ID} className="odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{lead.Business_Name}</td>
                   <td className="px-6 py-4 text-gray-600">{lead.Industry}</td>
+                  <td className="px-6 py-4 text-gray-600">{lead.Tab_Category || 'N/A'}</td>
                   
                   <td className="px-6 py-4 text-gray-500 text-xs">
                     <div>📞 {lead.Business_Owner_Phone || 'N/A'}</div>
@@ -278,6 +591,10 @@ export default function Leads() {
                     <div>✉️ {lead.Contact_Person_Email || 'N/A'}</div>
                   </td>
 
+                  <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
+                    {lead.Date_Added || 'N/A'}
+                  </td>
+
                   <td className="px-6 py-4 text-center">
                     <button 
                       onClick={() => openViewModal(lead)}
@@ -288,8 +605,10 @@ export default function Leads() {
                   </td>
                 </tr>
               ))}
-              {leads.length === 0 && (
-                <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-500">No leads found. Click "Add Lead" to get started.</td></tr>
+              {sortedLeads.length === 0 && (
+                <tr><td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                  {leads.length === 0 ? 'No leads found. Click "Add Lead" to get started.' : 'No leads match your search.'}
+                </td></tr>
               )}
             </tbody>
           </table>
@@ -316,7 +635,7 @@ export default function Leads() {
               />
             </div>
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
-              <div className="text-red-600 text-sm font-semibold">{errorMsg}</div>
+              <div className="text-red-600 text-sm font-semibold">{errorMsg && !errorMsg.includes('Failed to connect') ? errorMsg : ''}</div>
               <div className="flex gap-3">
                 <button onClick={closeModals} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
                 <button onClick={handleSaveNew} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Save Lead</button>
@@ -348,7 +667,7 @@ export default function Leads() {
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <button onClick={() => setIsDeleteOpen(true)} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium transition-colors">Delete Lead</button>
-                <span className="text-red-600 text-sm font-semibold">{errorMsg}</span>
+                <span className="text-red-600 text-sm font-semibold">{errorMsg && !errorMsg.includes('Failed to connect') ? errorMsg : ''}</span>
               </div>
               <div className="flex gap-3">
                 {!isEditMode ? (
