@@ -76,4 +76,36 @@ class LeadController extends Controller
             return response()->json(['error' => 'Failed to save lead: ' . $e->getMessage()], 500);
         }
     }
+
+    // DELETE: Remove a lead and its associated business data
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Find the lead using the custom Lead_ID
+            $lead = Lead::where('Lead_ID', $id)->first();
+
+            if (!$lead) {
+                return response()->json(['message' => 'Lead not found.'], 404);
+            }
+
+            // If the lead has an associated Business_ID, delete the business and social media first
+            if ($lead->Business_ID) {
+                BusinessSocialMedia::where('Business_ID', $lead->Business_ID)->delete();
+                Business::where('Business_ID', $lead->Business_ID)->delete();
+            }
+
+            // Finally, delete the lead
+            $lead->delete();
+
+            DB::commit();
+
+            return response()->json(['message' => 'Lead deleted successfully.'], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Failed to delete lead: ' . $e->getMessage()], 500);
+        }
+    }
 }

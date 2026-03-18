@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\EmployeeController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -14,4 +15,12 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/leads', [LeadController::class, 'index']);
 
-Route::post('/leads', [LeadController::class, 'store']); // <-- ADD THIS LINE
+Route::post('/leads', [LeadController::class, 'store']); 
+
+Route::delete('/leads/{id}', [LeadController::class, 'destroy']);
+
+// Employee Management Routes
+Route::get('/employees', [EmployeeController::class, 'index']);
+Route::post('/employees', [EmployeeController::class, 'store']);
+Route::put('/employees/{id}', [EmployeeController::class, 'update']);
+Route::delete('/employees/{id}', [EmployeeController::class, 'destroy']);

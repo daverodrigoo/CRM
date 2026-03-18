@@ -1,37 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
-
-// Helper to get today's date in YYYY-MM-DD format
-const getTodayDate = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-// Helper to check for duplicates
-const checkIsDuplicate = (newLead, existingList) => {
-  return existingList.some(lead => {
-    const isIdMatch = newLead.Lead_ID && lead.Lead_ID === newLead.Lead_ID;
-    const isNameMatch = (lead.Business_Name || '').trim().toLowerCase() === (newLead.Business_Name || '').trim().toLowerCase();
-    const isIndustryMatch = (lead.Industry || '').trim().toLowerCase() === (newLead.Industry || '').trim().toLowerCase();
-    return isIdMatch || (isNameMatch && isIndustryMatch);
-  });
-};
-
-// Helper to safely generate the next Lead ID
-const generateNextId = (allLeads) => {
-  let maxId = 0;
-  allLeads.forEach(l => {
-    if (l.Lead_ID && l.Lead_ID.startsWith('CHIMES-')) {
-      const num = parseInt(l.Lead_ID.replace('CHIMES-', ''), 10);
-      if (!isNaN(num) && num > maxId) maxId = num;
-    }
-  });
-  return `CHIMES-${String(maxId + 1).padStart(5, '0')}`;
-};
 
 const emptyForm = {
   Lead_ID: '', Date_Added: '', Business_Name: '', 
@@ -114,10 +83,9 @@ const LeadForm = ({ formData, handleInputChange, handleSocialMediaChange, addSoc
   );
 };
 
-export default function Leads() {
+export default function AssignedLeads() {
   const [leads, setLeads] = useState([]); 
   const [searchTerm, setSearchTerm] = useState(''); 
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false); 
@@ -132,8 +100,6 @@ export default function Leads() {
   const [itemsPerPage, setItemsPerPage] = useState('10');
   const [selectedLeads, setSelectedLeads] = useState([]);
 
-  const fileInputRef = useRef(null);
-
   useEffect(() => {
     fetchLeads();
   }, []);
@@ -142,26 +108,17 @@ export default function Leads() {
     setSelectedLeads([]);
   }, [currentPage, searchTerm, itemsPerPage]);
 
-  const fetchLeads = async () => {
+const fetchLeads = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/leads');
-      const formattedLeads = response.data.map(lead => {
-        const business = lead.business || {};
-        return {
-          Lead_ID: lead.Lead_ID, Date_Added: lead.Date_Added, Source: lead.Source || '',
-          Tab_Category: lead.Tab_Category || '', Solution_Needed: lead.Solution_Needed || '', Remarks: lead.Remarks || '',
-          Business_Name: business.Business_Name || '', Industry: business.Industry || '', Website_Link: business.Website_Link || '',
-          Contact_Person_First_Name: business.Contact_Person_First_Name || '', Contact_Last_Name: business.Contact_Last_Name || '',
-          Contact_Person_Phone: business.Contact_Person_Phone || '', Contact_Person_Email: business.Contact_Person_Email || '',
-          Business_Owner_First_Name: business.Business_Owner_First_Name || '', Business_Owner_Last_Name: business.Business_Owner_Last_Name || '',
-          Business_Owner_Phone: business.Business_Owner_Phone || '', Business_Owner_Email: business.Business_Owner_Email || '',
-          Business_Phone: business.Business_Phone || '', Business_Email: business.Business_Email || '',
-          Social_Media: business.social_media && business.social_media.length > 0 ? business.social_media.map(sm => sm.URL) : ['']
-        };
-      });
-      setLeads(formattedLeads);
+      // Temporarily disabled the API call so it doesn't load the main Leads data.
+      // Later, we will change this to fetch only leads assigned to specific employees 
+      // (e.g., axios.get('http://localhost:8000/api/assigned-leads'))
+      
+      setLeads([]); // Keeps the table completely empty for now
+      
     } catch (error) {
-      setErrorMsg("Failed to connect to the database. Please make sure the backend is running.");
+      console.error("Error fetching leads:", error);
+      setErrorMsg("Failed to connect to the database.");
     }
   };
 
@@ -192,25 +149,6 @@ export default function Leads() {
     return true;
   };
 
-  const handleSaveNew = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    if (checkIsDuplicate(formData, leads)) {
-      setErrorMsg('A lead with this Business Name and Industry already exists.');
-      return;
-    }
-    try {
-      const newLeadData = { ...formData, Lead_ID: generateNextId(leads) };
-      await axios.post('http://localhost:8000/api/leads', newLeadData);
-      fetchLeads(); 
-      setIsAddOpen(false);
-      setFormData(emptyForm);
-      setErrorMsg('');
-    } catch (error) {
-      setErrorMsg("Failed to save lead to the database. Please try again.");
-    }
-  };
-
   const openViewModal = (lead) => {
     setSelectedLead(lead);
     setFormData({ ...lead, Social_Media: Array.isArray(lead.Social_Media) ? lead.Social_Media : [''] });
@@ -228,13 +166,9 @@ export default function Leads() {
     setErrorMsg('');
   };
 
-// Delete a single lead from the database
   const confirmDelete = async () => {
     try {
-      // 1. Tell Laravel to delete it from the database
       await axios.delete(`http://localhost:8000/api/leads/${selectedLead.Lead_ID}`);
-      
-      // 2. If successful, remove it from the React screen
       setLeads(leads.filter(l => l.Lead_ID !== selectedLead.Lead_ID));
       setIsDeleteOpen(false);
       setIsViewOpen(false);
@@ -245,15 +179,11 @@ export default function Leads() {
     }
   };
 
-  // Delete multiple leads from the database
   const confirmBulkDelete = async () => {
     try {
-      // 1. Fire off a delete request to Laravel for EVERY selected ID simultaneously
       await Promise.all(
         selectedLeads.map(id => axios.delete(`http://localhost:8000/api/leads/${id}`))
       );
-
-      // 2. Once the database is wiped, remove them from the React screen
       setLeads(leads.filter(l => !selectedLeads.includes(l.Lead_ID)));
       setSelectedLeads([]);
       setIsBulkDeleteOpen(false);
@@ -264,101 +194,9 @@ export default function Leads() {
   };
 
   const closeModals = () => {
-    setIsAddOpen(false);
     setIsViewOpen(false);
     setIsEditMode(false);
     setErrorMsg('');
-  };
-
-  const handleImportClick = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
-  };
-
-  // RESTORED: Full File Upload Logic
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target.result;
-      const { newLeads, skipped } = parseCSVToLeads(text, leads);
-      
-      if (newLeads.length > 0) {
-        let successCount = 0;
-        let failCount = 0;
-
-        for (const lead of newLeads) {
-          try {
-            await axios.post('http://localhost:8000/api/leads', lead);
-            successCount++;
-          } catch (err) {
-            failCount++;
-          }
-        }
-        
-        fetchLeads();
-        alert(`Import complete!\nSuccessfully added: ${successCount}\nFailed to add: ${failCount}\nSkipped (Duplicates): ${skipped}`);
-      } else if (skipped > 0) {
-        alert(`No new leads imported. Skipped ${skipped} duplicate(s).`);
-      } else {
-        alert('No valid leads found in the CSV.');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = null; 
-  };
-
-  // RESTORED: Full CSV Parser Logic
-  const parseCSVToLeads = (text, currentLeads) => {
-    const lines = text.split('\n').filter(line => line.trim() !== '');
-    if (lines.length < 2) return { newLeads: [], skipped: 0 }; 
-    
-    const headers = lines[0].split(',').map(h => h.trim());
-    const newLeads = [];
-    let skippedCount = 0;
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = [];
-      let inQuotes = false;
-      let currentValue = '';
-      
-      for (let char of lines[i]) {
-        if (char === '"') inQuotes = !inQuotes;
-        else if (char === ',' && !inQuotes) {
-          values.push(currentValue.trim());
-          currentValue = '';
-        } else {
-          currentValue += char;
-        }
-      }
-      values.push(currentValue.trim());
-
-      const leadObj = { ...emptyForm }; 
-      headers.forEach((header, index) => {
-        let val = values[index] || '';
-        if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-        if (header === 'Lead_ID') return; 
-
-        if (header === 'Social_Media') {
-           leadObj[header] = val.split(';').map(s => s.trim()).filter(Boolean);
-           if (leadObj[header].length === 0) leadObj[header] = [''];
-        } else if (leadObj.hasOwnProperty(header)) {
-           leadObj[header] = val;
-        }
-      });
-
-      const isDuplicate = checkIsDuplicate(leadObj, [...currentLeads, ...newLeads]);
-      if (isDuplicate) {
-        skippedCount++;
-        continue;
-      }
-
-      leadObj.Lead_ID = generateNextId([...currentLeads, ...newLeads]);
-      if (!leadObj.Date_Added) leadObj.Date_Added = getTodayDate();
-      newLeads.push(leadObj);
-    }
-    return { newLeads, skipped: skippedCount };
   };
 
   const handleSort = (key) => {
@@ -433,7 +271,7 @@ export default function Leads() {
       
       <main className="pt-28 px-8 pb-12 max-w-[96%] mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Leads Management</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Assigned Leads</h1>
           
           <div className="flex items-center gap-3">
             <input
@@ -443,9 +281,7 @@ export default function Leads() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7E3A99] focus:border-transparent text-sm w-64 shadow-sm"
             />
-            <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-            <button onClick={handleImportClick} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md font-medium transition-colors shadow-sm text-sm">Import</button>
-            <button onClick={() => { setFormData({ ...emptyForm, Date_Added: getTodayDate() }); setIsAddOpen(true); setErrorMsg(''); }} className="bg-[#7E3A99] hover:bg-[#19a828] text-white px-5 py-2 rounded-md font-medium transition-colors shadow-sm text-sm">+ Add Lead</button>
+            {/* The Add and Import buttons were completely removed from here */}
           </div>
         </div>
 
@@ -550,7 +386,7 @@ export default function Leads() {
                 );
               })}
               {currentLeads.length === 0 && (
-                <tr><td colSpan="9" className="px-6 py-8 text-center text-gray-500">No leads found.</td></tr>
+                <tr><td colSpan="9" className="px-6 py-8 text-center text-gray-500">No assigned leads found.</td></tr>
               )}
             </tbody>
           </table>
@@ -581,29 +417,7 @@ export default function Leads() {
         </div>
       </main>
 
-      {/* RESTORED: Add Modal */}
-      {isAddOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">Add New Lead</h2>
-              <button onClick={closeModals} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div className="p-6 overflow-y-auto">
-              <LeadForm formData={formData} handleInputChange={handleInputChange} handleSocialMediaChange={handleSocialMediaChange} addSocialMedia={addSocialMedia} removeSocialMedia={removeSocialMedia} isReadonly={false} isEditMode={false} />
-            </div>
-            <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
-              <div className="text-red-600 text-sm font-semibold">{errorMsg && !errorMsg.includes('Failed to connect') ? errorMsg : ''}</div>
-              <div className="flex gap-3">
-                <button onClick={closeModals} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
-                <button onClick={handleSaveNew} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Save Lead</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* RESTORED: View/Edit Modal */}
+      {/* View/Edit Modal */}
       {isViewOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -637,6 +451,7 @@ export default function Leads() {
         </div>
       )}
 
+      {/* Bulk Delete Modal */}
       {isBulkDeleteOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 text-center">
@@ -653,6 +468,7 @@ export default function Leads() {
         </div>
       )}
       
+      {/* Single Delete Modal */}
       {isDeleteOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 text-center">

@@ -5,15 +5,28 @@ import logo from '../assets/logo.png';
 export default function Navbar() {
   const location = useLocation();
 
-  // UPDATED: Added the Meeting route here
+  // Added a dropdown array to the Employees object
   const navItems = [
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Leads', path: '/leads' },
     { name: 'Meeting', path: '/meeting' },
-    { name: 'Employees', path: '/employees' }
+    { 
+      name: 'Employees', 
+      path: '/employees',
+      dropdown: [
+        { name: 'Management', path: '/employees' },
+        { name: 'Assigned Leads', path: '/assigned-leads' }
+      ]
+    }
   ];
 
-  const isActive = (path) => location.pathname === path;
+  // Modified active check so the parent nav item stays highlighted 
+  // if you are on one of its dropdown pages
+  const isItemActive = (item) => {
+    if (location.pathname === item.path) return true;
+    if (item.dropdown && item.dropdown.some(sub => location.pathname === sub.path)) return true;
+    return false;
+  };
 
   return (
     <nav className="flex items-center justify-between px-6 lg:px-12 py-4 bg-[#f8fbfa] shadow-sm sticky top-0 z-50">
@@ -26,19 +39,47 @@ export default function Navbar() {
 
       <ul className="hidden md:flex justify-center items-center gap-12 m-0 p-0">
         {navItems.map((item) => (
-          <li key={item.name}>
+          // Add relative and group classes if there is a dropdown
+          <li key={item.name} className={item.dropdown ? "relative group" : ""}>
             <Link
               to={item.path}
-              className={`relative text-xs font-bold uppercase tracking-widest cursor-pointer pb-2 transition-colors duration-300 hover:text-[#19a828] ${
-                isActive(item.path) ? 'text-[#7E3A99]' : 'text-gray-500'
+              className={`relative flex items-center gap-1 text-xs font-bold uppercase tracking-widest cursor-pointer pb-2 transition-colors duration-300 hover:text-[#19a828] ${
+                isItemActive(item) ? 'text-[#7E3A99]' : 'text-gray-500'
               }`}
             >
               {item.name}
               
-              {isActive(item.path) && (
+              {/* Dropdown arrow icon */}
+              {item.dropdown && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform duration-300 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+              
+              {/* Active purple underline */}
+              {isItemActive(item) && (
                 <span className="absolute left-0 -bottom-1 w-full h-[3px] bg-[#7E3A99] rounded-t-md"></span>
               )}
             </Link>
+
+            {/* Dropdown Menu Container */}
+            {item.dropdown && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 min-w-[180px]">
+                <div className="bg-white border border-gray-100 rounded-lg shadow-xl py-2 flex flex-col">
+                  {item.dropdown.map((subItem) => (
+                    <Link 
+                      key={subItem.name}
+                      to={subItem.path} 
+                      className={`px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors duration-300 hover:bg-[#f8fbfa] hover:text-[#19a828] ${
+                        location.pathname === subItem.path ? 'text-[#7E3A99] bg-[#f8fbfa]' : 'text-gray-500'
+                      }`}
+                    >
+                      {subItem.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </li>
         ))}
       </ul>
