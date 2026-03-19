@@ -1,31 +1,71 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
+
+// Smart function to properly extract the role from your Login.jsx session
+const getStoredRole = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const userObj = JSON.parse(userStr);
+      return userObj.role || 'Super Admin';
+    }
+  } catch (e) {
+    console.error("Error parsing user from local storage", e);
+  }
+  return 'Super Admin'; // Fallback
+};
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Added a dropdown array to the Employees object
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Leads', path: '/leads' },
-    { name: 'Meeting', path: '/meeting' },
-    { 
-      name: 'Employees', 
-      path: '/employees',
-      dropdown: [
-        { name: 'Management', path: '/employees' },
+  const userRole = localStorage.getItem('USER_ROLE') || getStoredRole();
+
+  const getNavItems = () => {
+    if (userRole === 'Super Admin') {
+      return [
+        { name: 'Dashboard', path: '/dashboard' },
+        { name: 'Leads', path: '/leads' },
+        { name: 'Meeting', path: '/meeting' },
+        { 
+          name: 'Employees', 
+          path: '/employees',
+          dropdown: [
+            { name: 'Management', path: '/employees' },
+            { name: 'Assigned Leads', path: '/assigned-leads' }
+          ]
+        }
+      ];
+    } else if (userRole === 'Admin') {
+      // Admin Role Navbar Configuration
+      return [
+        { name: 'Dashboard', path: '/dashboard' },
+        { name: 'Leads', path: '/leads' },
+        { name: 'Assigned Leads', path: '/employee-assigned-leads' }
+      ];
+    } else {
+      // Viewer Role Navbar Configuration
+      return [
+        { name: 'Dashboard', path: '/dashboard' },
+        { name: 'Leads', path: '/leads' },
+        // Updated to point strictly to AssignedLeads.jsx!
         { name: 'Assigned Leads', path: '/assigned-leads' }
-      ]
+      ];
     }
-  ];
+  };
 
-  // Modified active check so the parent nav item stays highlighted 
-  // if you are on one of its dropdown pages
+  const navItems = getNavItems();
+
   const isItemActive = (item) => {
     if (location.pathname === item.path) return true;
     if (item.dropdown && item.dropdown.some(sub => location.pathname === sub.path)) return true;
     return false;
+  };
+
+  const handleLogout = () => {
+    localStorage.clear(); 
+    navigate('/');
   };
 
   return (
@@ -39,7 +79,6 @@ export default function Navbar() {
 
       <ul className="hidden md:flex justify-center items-center gap-12 m-0 p-0">
         {navItems.map((item) => (
-          // Add relative and group classes if there is a dropdown
           <li key={item.name} className={item.dropdown ? "relative group" : ""}>
             <Link
               to={item.path}
@@ -49,20 +88,17 @@ export default function Navbar() {
             >
               {item.name}
               
-              {/* Dropdown arrow icon */}
               {item.dropdown && (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform duration-300 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               )}
               
-              {/* Active purple underline */}
               {isItemActive(item) && (
                 <span className="absolute left-0 -bottom-1 w-full h-[3px] bg-[#7E3A99] rounded-t-md"></span>
               )}
             </Link>
 
-            {/* Dropdown Menu Container */}
             {item.dropdown && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 min-w-[180px]">
                 <div className="bg-white border border-gray-100 rounded-lg shadow-xl py-2 flex flex-col">
@@ -85,11 +121,9 @@ export default function Navbar() {
       </ul>
 
       <div className="flex-1 flex items-center justify-end">
-        <Link to="/">
-          <button className="bg-[#7E3A99] hover:bg-[#19a828] text-white uppercase tracking-widest rounded-full px-8 py-2.5 text-xs font-bold transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5">
-            LOGOUT
-          </button>
-        </Link>
+        <button onClick={handleLogout} className="bg-[#7E3A99] hover:bg-[#19a828] text-white uppercase tracking-widest rounded-full px-8 py-2.5 text-xs font-bold transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5">
+          LOGOUT
+        </button>
       </div>
       
     </nav>

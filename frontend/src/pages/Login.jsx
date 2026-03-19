@@ -29,11 +29,13 @@ export default function Login() {
       // 2. If successful, Laravel sends back the user data and a secure token
       const { user, token } = response.data;
 
-      // 3. Save the token and user role in the browser's local storage
-      // This allows the browser to "remember" who is logged in and what their role is
+      // 3. Save the token, user role, name, AND ID in the browser's local storage
       localStorage.setItem('AUTH_TOKEN', token);
       localStorage.setItem('USER_ROLE', user.role);
       localStorage.setItem('USER_NAME', user.name);
+      
+      // THE FIX: We added this line to save the user's unique ID!
+      localStorage.setItem('USER_ID', user.id); 
 
       // 4. Redirect the user to the Leads page!
       navigate('/dashboard');

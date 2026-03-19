@@ -108,4 +108,38 @@ class LeadController extends Controller
             return response()->json(['error' => 'Failed to delete lead: ' . $e->getMessage()], 500);
         }
     }
+
+    // --- NEW: Assign multiple leads to an employee ---
+    public function assignLeads(Request $request)
+    {
+        $request->validate([
+            'lead_ids' => 'required|array',
+            'employee_id' => 'required|exists:users,id' // Make sure the user exists!
+        ]);
+
+        try {
+            // Update all selected leads to belong to this user
+            Lead::whereIn('Lead_ID', $request->lead_ids)
+                ->update(['user_id' => $request->employee_id]);
+
+            return response()->json(['message' => 'Leads successfully assigned!'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to assign leads: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // --- NEW: Fetch leads assigned to a specific employee ---
+    public function getAssignedLeads($userId)
+    {
+        try {
+            // Fetch leads assigned to this user, including their connected business data
+            $assignedLeads = Lead::with(['business', 'business.socialMedia'])
+                ->where('user_id', $userId)
+                ->get();
+
+            return response()->json($assignedLeads, 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch assigned leads: ' . $e->getMessage()], 500);
+        }
+    }
 }
