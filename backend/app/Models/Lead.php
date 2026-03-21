@@ -23,7 +23,17 @@ class Lead extends Model
         'Source', 
         'Tab_Category', 
         'Solution_Needed', 
-        'Remarks'
+        'Remarks',
+        // NEW PIPELINE COLUMNS:
+        'Lead_Status',
+        'Inquiry_Sent',
+        'Inquiry_Type',
+        'Replied',
+        'Email_Sent',
+        'Email_Replied',
+        'Date_Dialed',
+        'Pipeline_Remarks',
+        'Meeting_Booked'
     ];
 
     public function business()

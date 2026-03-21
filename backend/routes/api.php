@@ -26,3 +26,6 @@ Route::put('/employees/{id}', [EmployeeController::class, 'update']);
 Route::delete('/employees/{id}', [EmployeeController::class, 'destroy']);
 Route::post('/leads/assign', [LeadController::class, 'assignLeads']);
 Route::get('/leads/assigned/{userId}', [LeadController::class, 'getAssignedLeads']);
+
+Route::put('/leads/{id}', [LeadController::class, 'update']);
+Route::put('/leads/{id}/pipeline', [LeadController::class, 'updatePipeline']);
