@@ -564,7 +564,7 @@ useEffect(() => {
                                     </>
                                   )}
                                 </div>
-                                <div className="flex justify-end gap-2 relative z-50">
+                                <div className="flex justify-end gap-2 relative z-0">
                                   <button onClick={() => { setIsAssignOpen(false); setIsEmployeeSelectOpen(false); }} className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-md font-medium transition-colors">Cancel</button>
                                   <button onClick={confirmAssign} disabled={!selectedAdminId} className="px-3 py-1.5 text-xs bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors disabled:opacity-50">Assign</button>
                                 </div>
