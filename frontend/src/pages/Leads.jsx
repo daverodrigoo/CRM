@@ -125,6 +125,7 @@ export default function Leads() {
   const [isEmployeeSelectOpen, setIsEmployeeSelectOpen] = useState(false);
   const [admins, setAdmins] = useState([]);
   const [selectedAdminId, setSelectedAdminId] = useState('');
+  const [batchName, setBatchName] = useState('');
   
   const [selectedLead, setSelectedLead] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
@@ -291,19 +292,26 @@ useEffect(() => {
     }
   };
 
-  const confirmAssign = async () => {
+const confirmAssign = async () => {
+    if (!batchName.trim()) {
+      alert("Please enter a Batch Name for these leads.");
+      return;
+    }
+
     try {
       await axios.post('http://localhost:8000/api/leads/assign', {
         lead_ids: selectedLeads,
-        employee_id: selectedAdminId
+        employee_id: selectedAdminId,
+        batch_name: batchName
       });
       
-      alert(`Successfully assigned ${selectedLeads.length} leads!`);
+      alert(`Successfully assigned ${selectedLeads.length} leads to ${batchName}!`);
       
       setIsAssignOpen(false);
       setIsEmployeeSelectOpen(false);
       setSelectedLeads([]); 
       setSelectedAdminId(''); 
+      setBatchName(''); // Reset the batch name
       fetchLeads();
     } catch (error) {
       console.error("Error assigning leads:", error);
@@ -521,7 +529,7 @@ useEffect(() => {
                 </th>
 
 {selectedLeads.length > 0 ? (
-                  <th colSpan="9" className="px-4 py-4 whitespace-nowrap bg-[#6c3282]">
+                  <th colSpan="8" className="px-4 py-4 whitespace-nowrap bg-[#6c3282]">
                     <div className="flex items-center gap-6">
                       <span className="font-bold bg-white/20 px-3 py-1 rounded-full text-xs">
                         {selectedLeads.length} selected
@@ -539,6 +547,15 @@ useEffect(() => {
                           {isAssignOpen && (
                             <div className="absolute top-full left-0 mt-3 w-64 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-visible text-gray-800">
                               <div className="p-4">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Batch Name</label>
+                                <input 
+                                  type="text" 
+                                  value={batchName} 
+                                  onChange={(e) => setBatchName(e.target.value)} 
+                                  placeholder="e.g., April Outreach"
+                                  className="w-full border border-gray-300 rounded-lg p-2 text-sm mb-4 outline-none focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20"
+                                />
+
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Assign to</label>
                                 <div className="relative mb-4">
                                   <button type="button" onClick={(e) => { e.stopPropagation(); setIsEmployeeSelectOpen(!isEmployeeSelectOpen); }} className={`w-full flex items-center justify-between border ${isEmployeeSelectOpen ? 'border-[#7E3A99] ring-2 ring-[#7E3A99]/20' : 'border-gray-300 hover:border-gray-400'} rounded-lg p-2 text-sm bg-white transition-all cursor-pointer outline-none relative z-50`}>
@@ -605,7 +622,6 @@ useEffect(() => {
                     <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-[#6c3282] transition-colors" onClick={() => handleSort('Date_Added')}>
                       <div className="flex items-center">Date Added {renderSortIcon('Date_Added')}</div>
                     </th>
-                    <th className="px-6 py-4 whitespace-nowrap">Assigned To</th>
                     <th className="px-6 py-4 text-center whitespace-nowrap">Action</th>
                   </>
                 )}
@@ -632,13 +648,6 @@ useEffect(() => {
                     <td className="px-6 py-4 text-gray-500 text-xs"><div>📞 {lead.Business_Phone || 'N/A'}</div><div>✉️ {lead.Business_Email || 'N/A'}</div></td>
                     <td className="px-6 py-4 text-gray-500 text-xs"><div>📞 {lead.Contact_Person_Phone || 'N/A'}</div><div>✉️ {lead.Contact_Person_Email || 'N/A'}</div></td>
                     <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{lead.Date_Added || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {(() => {
-                        if (!lead.user_id) return <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-[11px] font-semibold tracking-wide">Unassigned</span>;
-                        const assignedAdmin = admins.find(a => String(a.id || a.User_ID || a.Employee_ID) === String(lead.user_id));
-                        return <span className="bg-purple-100 text-[#7E3A99] px-2 py-1 rounded text-[11px] font-bold tracking-wide shadow-sm">{assignedAdmin ? assignedAdmin.name : 'Assigned'}</span>;
-                      })()}
-                    </td>
                     <td className="px-6 py-4 text-center">
                       <button onClick={() => openViewModal(lead)} className="text-[#7E3A99] hover:text-[#19a828] font-bold transition-colors">
                         View Details
@@ -648,7 +657,7 @@ useEffect(() => {
                 );
               })}
               {currentLeads.length === 0 && (
-                <tr><td colSpan="9" className="px-6 py-8 text-center text-gray-500">No leads found.</td></tr>
+                <tr><td colSpan="8" className="px-6 py-8 text-center text-gray-500">No leads found.</td></tr>
               )}
             </tbody>
           </table>

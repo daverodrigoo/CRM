@@ -8,6 +8,8 @@ use App\Models\Lead;
 use App\Models\BusinessSocialMedia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\AssignmentBatch;
+use App\Models\AssignedLead;
 
 class LeadController extends Controller
 {
@@ -175,39 +177,92 @@ class LeadController extends Controller
         }
     }
 
-    // --- Assign leads to an employee ---
+// --- Assign leads to an employee (Creates a Tab/Batch and Photocopies) ---
     public function assignLeads(Request $request)
     {
-        $request->validate(['lead_ids' => 'required|array', 'employee_id' => 'required|exists:users,id']);
+        // 1. Validate the incoming request (Now requires a batch_name!)
+        $validated = $request->validate([
+            'lead_ids' => 'required|array',
+            'employee_id' => 'required|exists:users,id',
+            'batch_name' => 'required|string|max:255', 
+        ]);
+
         try {
-            Lead::whereIn('Lead_ID', $request->lead_ids)->update(['user_id' => $request->employee_id]);
-            return response()->json(['message' => 'Leads successfully assigned!'], 200);
+            // 2. Create the new Batch (The Tab)
+            $batch = AssignmentBatch::create([
+                'user_id' => $validated['employee_id'],
+                'Batch_Name' => $validated['batch_name'],
+            ]);
+
+            // 3. Create a Photocopy for every single lead selected
+            foreach ($validated['lead_ids'] as $leadId) {
+                AssignedLead::create([
+                    'Batch_ID' => $batch->Batch_ID,
+                    'Lead_ID' => $leadId,
+                    'Date_Assigned' => now(),
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Successfully assigned ' . count($validated['lead_ids']) . ' leads to ' . $batch->Batch_Name
+            ], 200);
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to assign leads: ' . $e->getMessage()], 500);
         }
     }
 
-    // --- Fetch assigned leads ---
+    // --- Fetch assigned leads (Now fetches Batches and Nested Leads) ---
     public function getAssignedLeads($userId)
     {
         try {
-            $leads = Lead::with(['business', 'business.socialMedia'])->where('user_id', $this->safeString($userId))->get();
-            $formattedLeads = $leads->map(function ($lead) {
-                $leadArray = $lead->toArray();
-                $leadArray['pipeline'] = [
-                    'Lead_Status'    => $lead->Lead_Status ?? 'New Lead',
-                    'Inquiry_Sent'   => $lead->Inquiry_Sent === 'Yes',
-                    'Replied'        => $lead->Replied === 'Yes',
-                    'Email_Sent'     => $lead->Email_Sent === 'Yes',
-                    'Email_Replied'  => $lead->Email_Replied === 'Yes',
-                    'Date_Dialed'    => $lead->Date_Dialed,
-                    'Remarks'        => $lead->Pipeline_Remarks,
-                    'Meeting_Booked' => $lead->Meeting_Booked === 'Yes',
+            // 1. Fetch the Batches owned by this user, and eagerly load the photocopied leads + master blueprints
+            $batches = AssignmentBatch::with([
+                'assignedLeads.masterLead.business.socialMedia',
+                'assignedLeads.inquiries'
+            ])->where('user_id', $this->safeString($userId))->get();
+
+            // 2. Format it cleanly so React can easily map through the Tabs and Tables
+            $formattedBatches = $batches->map(function ($batch) {
+                return [
+                    'Batch_ID' => $batch->Batch_ID,
+                    'Batch_Name' => $batch->Batch_Name,
+                    'leads' => $batch->assignedLeads->map(function ($assignedLead) {
+                        $master = $assignedLead->masterLead;
+                        $business = $master ? $master->business : null;
+
+                        return [
+                            // Pipeline Instance Data (The Photocopy)
+                            'Assigned_Lead_ID' => $assignedLead->Assigned_Lead_ID,
+                            'Date_Assigned' => $assignedLead->Date_Assigned,
+                            'Responded' => (bool) $assignedLead->Responded,
+                            'Meeting_Booked' => (bool) $assignedLead->Meeting_Booked,
+                            'Meeting_Date' => $assignedLead->Meeting_Date,
+                            'Meeting_Held' => (bool) $assignedLead->Meeting_Held,
+                            'Remarks' => $assignedLead->Remarks,
+                            'Service_Offered' => $assignedLead->Service_Offered,
+                            'Deal_Closed' => (bool) $assignedLead->Deal_Closed,
+                            'Deal_Value' => $assignedLead->Deal_Value,
+                            'inquiries' => $assignedLead->inquiries->pluck('Inquiry_Type'),
+                            
+                            // Master Lead & Business Data (For the UI table & View Modal)
+                            'Lead_ID' => $assignedLead->Lead_ID,
+                            'Business_Name' => $business ? $business->Business_Name : 'Unknown',
+                            'Industry' => $business ? $business->Industry : 'Unknown',
+                            'Business_Email' => $business ? $business->Business_Email : '',
+                            'Business_Phone' => $business ? $business->Business_Phone : '',
+                            'Contact_Person_First_Name' => $business ? $business->Contact_Person_First_Name : '',
+                            'Contact_Last_Name' => $business ? $business->Contact_Last_Name : '',
+                            
+                            // Send the whole master object just in case the View Modal needs more details
+                            'master_data' => $master
+                        ];
+                    })
                 ];
-                $leadArray['inquiry'] = ['Inquiry_Type' => $lead->Inquiry_Type];
-                return $leadArray;
             });
-            return response()->json($formattedLeads, 200);
+
+            return response()->json($formattedBatches, 200);
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch assigned leads: ' . $e->getMessage()], 500);
         }
@@ -231,6 +286,54 @@ class LeadController extends Controller
             return response()->json(['message' => 'Pipeline updated successfully!'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to update pipeline: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // --- Update an Assigned Lead (Photocopy) Pipeline Field ---
+    public function updateAssignedLeadPipeline(Request $request, $assignedLeadId)
+    {
+        $request->validate([
+            'field' => 'required|string',
+        ]);
+
+        try {
+            $assignedLead = AssignedLead::findOrFail($assignedLeadId);
+            $field = $request->input('field');
+            $value = $request->input('value');
+
+            // Handle the separate inquiries table
+            if ($field === 'Inquiry_Type') {
+                $assignedLead->inquiries()->delete(); // clear old ones
+                if ($value && $value !== 'None') {
+                    $assignedLead->inquiries()->create(['Inquiry_Type' => $value]);
+                }
+            } else {
+                // Handle standard fields (Responded, Remarks, Meeting_Booked)
+                $assignedLead->$field = $value;
+                $assignedLead->save();
+            }
+
+            return response()->json(['message' => "$field updated successfully"], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to update field: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // --- Update Batch Name ---
+    public function updateBatchName(Request $request, $batchId)
+    {
+        $request->validate([
+            'Batch_Name' => 'required|string|max:255',
+        ]);
+
+        try {
+            $batch = AssignmentBatch::findOrFail($batchId);
+            $batch->Batch_Name = $request->input('Batch_Name');
+            $batch->save();
+
+            return response()->json(['message' => 'Batch name updated successfully'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to update batch name: ' . $e->getMessage()], 500);
         }
     }
 }
