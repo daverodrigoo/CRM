@@ -336,4 +336,18 @@ class LeadController extends Controller
             return response()->json(['error' => 'Failed to update batch name: ' . $e->getMessage()], 500);
         }
     }
+
+    // --- Delete an Assignment Batch ---
+    public function deleteBatch($batchId)
+    {
+        try {
+            $batch = AssignmentBatch::findOrFail($batchId);
+            $batch->delete(); // Cascades and deletes all AssignedLeads inside it automatically!
+
+            return response()->json(['message' => 'Batch deleted successfully'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to delete batch: ' . $e->getMessage()], 500);
+        }
+    }
+    
 }

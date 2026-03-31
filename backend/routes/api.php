@@ -20,6 +20,7 @@ Route::post('/leads', [LeadController::class, 'store']);
 Route::delete('/leads/{id}', [LeadController::class, 'destroy']);
 Route::put('/assigned-leads/{assignedLeadId}', [LeadController::class, 'updateAssignedLeadPipeline']);
 Route::put('/assignment-batches/{batchId}', [LeadController::class, 'updateBatchName']);
+Route::delete('/assignment-batches/{batchId}', [LeadController::class, 'deleteBatch']);
 
 // Employee Management Routes
 Route::get('/employees', [EmployeeController::class, 'index']);

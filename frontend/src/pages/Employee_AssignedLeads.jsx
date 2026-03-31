@@ -168,6 +168,27 @@ export default function Employee_AssignedLeads() {
     }
   };
 
+  const deleteBatch = async (batchId, batchName) => {
+    // Standard browser confirmation (just like you requested)
+    if (window.confirm(`Are you sure you want to close the "${batchName}" tab? This will remove all leads inside it from your workspace.`)) {
+      try {
+        await axios.delete(`http://localhost:8000/api/assignment-batches/${batchId}`);
+        
+        // Remove the tab from the screen
+        const updatedBatches = batches.filter(b => b.Batch_ID !== batchId);
+        setBatches(updatedBatches);
+        
+        // If they deleted the tab they were currently looking at, shift them to the first available tab
+        if (activeBatchId === batchId) {
+          setActiveBatchId(updatedBatches.length > 0 ? updatedBatches.Batch_ID : null);
+        }
+      } catch (error) {
+        console.error("Error deleting batch:", error);
+        alert("Failed to delete batch. Please try again.");
+      }
+    }
+  };
+
 
   const savePipelineField = async (assignedLeadId, field, value) => {
     try {
@@ -262,33 +283,48 @@ export default function Employee_AssignedLeads() {
                     if (e.key === 'Enter') saveBatchName(batch.Batch_ID);
                     if (e.key === 'Escape') setEditingBatchId(null);
                   }}
-                  onClick={(e) => e.stopPropagation()} // Prevents switching tabs when clicking the input
+                  onClick={(e) => e.stopPropagation()} 
                   className="bg-transparent border-b border-[#7E3A99] outline-none text-[#7E3A99] w-28 px-1 py-0.5"
                 />
               ) : (
                 <>
                   <span className="whitespace-nowrap">{batch.Batch_Name}</span>
-                  {/* The Edit Pencil Icon - Appears on Hover */}
+                  <span className={`text-[10px] px-1.5 py-0.5 ml-1 rounded-full ${activeBatchId === batch.Batch_ID ? 'bg-purple-100 text-[#7E3A99]' : 'bg-gray-300 text-gray-600'}`}>{batch.leads.length}</span>
+                  
+                  {/* The Edit Pencil Icon */}
                   <div
                     onClick={(e) => {
                       e.stopPropagation();
                       setEditingBatchId(batch.Batch_ID);
                       setEditingName(batch.Batch_Name);
                     }}
-                    className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-purple-100 ${activeBatchId === batch.Batch_ID ? 'text-[#7E3A99]' : 'text-gray-500 hover:text-[#7E3A99]'}`}
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-purple-100 ${activeBatchId === batch.Batch_ID ? 'text-[#7E3A99]' : 'text-gray-500 hover:text-[#7E3A99]'}`}
                     title="Edit Batch Name"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
                       <path d="M2.695 14.763l-1.262 3.152a.5.5 0 00.65.65l3.152-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
                     </svg>
                   </div>
+
+                  {/* The Delete 'X' Icon */}
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteBatch(batch.Batch_ID, batch.Batch_Name);
+                    }}
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-red-100 ${activeBatchId === batch.Batch_ID ? 'text-gray-400 hover:text-red-600' : 'text-gray-400 hover:text-red-600'}`}
+                    title="Delete Tab"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                    </svg>
+                  </div>
                 </>
               )}
-              <span className={`text-xs px-2 py-0.5 rounded-full ${activeBatchId === batch.Batch_ID ? 'bg-purple-100 text-[#7E3A99]' : 'bg-gray-300 text-gray-600'}`}>{batch.leads.length}</span>
             </div>
           ))}
           {batches.length === 0 && (
-             <div className="text-gray-500 italic text-sm py-2">No assigned batches yet.</div>
+             <div className="text-gray-500 italic text-sm py-2 px-2">No assigned batches yet.</div>
           )}
         </div>
 

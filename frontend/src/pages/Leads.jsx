@@ -552,7 +552,7 @@ const confirmAssign = async () => {
                                   type="text" 
                                   value={batchName} 
                                   onChange={(e) => setBatchName(e.target.value)} 
-                                  placeholder="e.g., April Outreach"
+                                  placeholder="Tab Name"
                                   className="w-full border border-gray-300 rounded-lg p-2 text-sm mb-4 outline-none focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20"
                                 />
 
