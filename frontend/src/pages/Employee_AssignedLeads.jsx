@@ -13,12 +13,11 @@ const emptyForm = {
 };
 
 const OPTIONS = {
-  Inquiry_Type: ['Cold Call', 'Email', 'Message'], // LinkedIn is removed
+  Inquiry_Type: ['Cold Call', 'Email', 'Message'],
   Responded: ['Yes', 'No'],
   Meeting_Booked: ['Yes', 'No']
 };
 
-// FIX: Switched to standard Tailwind colors to guarantee they compile and render!
 const getChipColor = (value) => {
   const safeVal = value ? String(value).trim() : 'None';
   switch (safeVal) {
@@ -36,15 +35,24 @@ const LeadForm = ({ formData, isReadonly }) => {
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Name</label><input type="text" value={formData.Business_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Industry</label><input type="text" value={formData.Industry || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Date Added</label><input type="date" value={formData.Date_Added || ''} disabled={true} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Name</label><input type="text" value={formData.Business_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Industry</label><input type="text" value={formData.Industry || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Date Added</label><input type="date" value={formData.Date_Added ? formData.Date_Added.split('T') : ''} disabled={true} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Phone</label><input type="text" value={formData.Business_Phone || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Email</label><input type="email" value={formData.Business_Email || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Website Link</label><input type="text" value={formData.Website_Link || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Phone</label><input type="text" value={formData.Business_Phone || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Email</label><input type="email" value={formData.Business_Email || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Website Link</label><input type="text" value={formData.Website_Link || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+      </div>
+
+      {/* --- RE-ADDED BUSINESS OWNER SECTION --- */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+        <h3 className="col-span-1 md:col-span-4 text-sm font-bold text-gray-700 border-b pb-2 mb-2">Business Owner</h3>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">First Name</label><input type="text" value={formData.Business_Owner_First_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Last Name</label><input type="text" value={formData.Business_Owner_Last_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Phone</label><input type="text" value={formData.Business_Owner_Phone || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Email</label><input type="email" value={formData.Business_Owner_Email || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
@@ -57,10 +65,25 @@ const LeadForm = ({ formData, isReadonly }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Source</label><input type="text" value={formData.Source || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Tab Category</label><input type="text" value={formData.Tab_Category || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Tab Category</label><input type="text" value={formData.Tab_Category || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
       </div>
 
-      <div className="space-y-1 border-t pt-4 mt-2"><label className="text-xs font-semibold text-gray-500">Solution Needed</label><textarea value={formData.Solution_Needed || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 h-24"></textarea></div>
+      {/* --- RE-ADDED SOCIAL MEDIA SECTION --- */}
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-gray-500">Social Media Links</label>
+        {formData.Social_Media && formData.Social_Media.map((link, index) => (
+          <input key={index} type="text" value={link || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 mb-2 bg-white" />
+        ))}
+        {(!formData.Social_Media || formData.Social_Media.length === 0) && (
+          <input type="text" value="N/A" disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 mb-2 bg-white" />
+        )}
+      </div>
+
+      {/* --- RE-ADDED REMARKS SECTION --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-2">
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Solution Needed</label><textarea value={formData.Solution_Needed || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 h-24 bg-white"></textarea></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Remarks</label><textarea value={formData.Remarks || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 h-24 bg-white"></textarea></div>
+      </div>
     </div>
   );
 };
@@ -101,7 +124,6 @@ const ChipSelect = ({ value, options, onChange, isOpen, onToggle }) => {
         <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[130px] bg-white rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 py-1 overflow-hidden animate-fade-in-down">
           {options.map((opt) => (
             <div key={opt} onClick={(e) => { e.stopPropagation(); onChange(opt); }} className={`px-3 py-1.5 text-[12px] font-medium cursor-pointer transition-colors flex items-center gap-2 ${safeValue === opt ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}>
-              {/* FIX: Added so the little indicator dots inside the menu render flawlessly! */}
               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getChipColor(opt).split(' ')}`}></div>
               <span className="truncate">{opt}</span>
             </div>
@@ -158,8 +180,6 @@ export default function Employee_AssignedLeads() {
     }
     try {
       await axios.put(`http://localhost:8000/api/assignment-batches/${batchId}`, { Batch_Name: editingName });
-      
-      // Update local state so it changes instantly
       setBatches(batches.map(b => b.Batch_ID === batchId ? { ...b, Batch_Name: editingName } : b));
       setEditingBatchId(null);
     } catch (error) {
@@ -169,16 +189,11 @@ export default function Employee_AssignedLeads() {
   };
 
   const deleteBatch = async (batchId, batchName) => {
-    // Standard browser confirmation (just like you requested)
     if (window.confirm(`Are you sure you want to close the "${batchName}" tab? This will remove all leads inside it from your workspace.`)) {
       try {
         await axios.delete(`http://localhost:8000/api/assignment-batches/${batchId}`);
-        
-        // Remove the tab from the screen
         const updatedBatches = batches.filter(b => b.Batch_ID !== batchId);
         setBatches(updatedBatches);
-        
-        // If they deleted the tab they were currently looking at, shift them to the first available tab
         if (activeBatchId === batchId) {
           setActiveBatchId(updatedBatches.length > 0 ? updatedBatches.Batch_ID : null);
         }
@@ -189,13 +204,11 @@ export default function Employee_AssignedLeads() {
     }
   };
 
-
   const savePipelineField = async (assignedLeadId, field, value) => {
     try {
       let dbValue = value;
       if (value === 'Yes') dbValue = true;
       if (value === 'No') dbValue = false;
-      
       await axios.put(`http://localhost:8000/api/assigned-leads/${assignedLeadId}`, { field, value: dbValue });
     } catch (error) {
       console.error(`Failed to auto-save ${field}:`, error);
@@ -209,7 +222,6 @@ export default function Employee_AssignedLeads() {
         ...batch,
         leads: batch.leads.map(lead => {
           if (lead.Assigned_Lead_ID === assignedLeadId) {
-            // FIX: This ensures the Inquiry Type array updates LIVE on the screen
             if (field === 'Inquiry_Type') {
               return { ...lead, inquiries: newValue === 'None' ? [] : [newValue] };
             }
@@ -237,14 +249,32 @@ export default function Employee_AssignedLeads() {
     setActiveDropdown(activeDropdown === dropdownId ? null : dropdownId);
   };
 
+  // --- FIX: Perfectly unpacking and flattening the nested data ---
   const openViewModal = (lead) => {
-    const combinedData = { ...emptyForm, ...lead.master_data, Business_Name: lead.Business_Name };
+    const master = lead.master_data || {};
+    const business = master.business || {};
+    
+    // Safely extract social media array based on Laravel serialization
+    const socialMediaRaw = business.social_media || business.socialMedia || [];
+    let socialMediaLinks = [''];
+    if (Array.isArray(socialMediaRaw) && socialMediaRaw.length > 0) {
+      socialMediaLinks = socialMediaRaw.map(sm => sm.URL || sm.url);
+    }
+
+    const combinedData = { 
+      ...emptyForm, 
+      ...master,        // Unpacks: Date_Added, Source, Tab_Category, Solution_Needed
+      ...business,      // Unpacks: Industry, Phone, Email, Business_Owner, Contact_Person, etc.
+      Business_Name: lead.Business_Name,
+      Social_Media: socialMediaLinks,
+      Remarks: master.Remarks || master.Pipeline_Remarks || '' 
+    };
+    
     setSelectedLead(lead);
     setFormData(combinedData);
     setIsViewOpen(true);
   };
 
-  // Pagination and Active Tab Logic
   const activeBatch = batches.find(b => b.Batch_ID === activeBatchId);
   const leads = activeBatch ? activeBatch.leads : [];
   
@@ -330,7 +360,6 @@ export default function Employee_AssignedLeads() {
 
         {/* --- TABLE --- */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
-          {/* FIX: overflow-visible allows the dropdown to pop out over the table correctly */}
           <div className="overflow-visible"> 
             <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
               <thead className="bg-[#7E3A99] text-white select-none">
