@@ -370,6 +370,7 @@ export default function Employee_AssignedLeads() {
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Responded</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap min-w-[250px] text-center">Remarks</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Meeting Booked</th>
+                  <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Completed</th> {/* NEW COLUMN */}
                   <th className="px-4 py-4 rounded-tr-lg"></th> 
                 </tr>
               </thead>
@@ -425,6 +426,22 @@ export default function Employee_AssignedLeads() {
                         onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-Meeting_Booked`)} 
                         onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Meeting_Booked', val)} 
                       />
+                    </td>
+
+                    {/* NEW COMPLETED CHECKBOX */}
+                    <td className="px-3 py-3 text-center">
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={lead.Completed || false}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            handleManualChange(lead.Assigned_Lead_ID, 'Completed', isChecked);
+                            savePipelineField(lead.Assigned_Lead_ID, 'Completed', isChecked);
+                          }}
+                          className="w-5 h-5 cursor-pointer accent-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                        />
+                      </div>
                     </td>
 
                     <td className="px-4 py-3 text-center">

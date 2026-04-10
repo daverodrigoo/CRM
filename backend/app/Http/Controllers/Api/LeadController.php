@@ -237,6 +237,7 @@ class LeadController extends Controller
                             'Date_Assigned' => $assignedLead->Date_Assigned,
                             'Responded' => (bool) $assignedLead->Responded,
                             'Meeting_Booked' => (bool) $assignedLead->Meeting_Booked,
+                            'Completed' => (bool) $assignedLead->Completed,
                             'Meeting_Date' => $assignedLead->Meeting_Date,
                             'Meeting_Held' => (bool) $assignedLead->Meeting_Held,
                             'Remarks' => $assignedLead->Remarks,
@@ -347,6 +348,50 @@ class LeadController extends Controller
             return response()->json(['message' => 'Batch deleted successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to delete batch: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // --- Super Admin: Get Progress Summary for All Employees ---
+    public function getAllAssignedLeadsSummary()
+    {
+        try {
+            // Fetch all batches, and eager load the user and assigned leads
+            $batches = AssignmentBatch::with(['user', 'assignedLeads.masterLead.business', 'assignedLeads.inquiries'])->get();
+
+            // Group everything by the User (Employee)
+            $grouped = $batches->groupBy('user_id')->map(function ($userBatches) {
+                $user = $userBatches->first()->user;
+                return [
+                    'User_ID' => $user->id,
+                    'Name' => $user->name ?? explode('@', $user->email), // Fallback if name is null
+                    'Email' => $user->email ?? '',
+                    'Batches' => $userBatches->map(function ($batch) {
+                        return [
+                            'Batch_ID' => $batch->Batch_ID,
+                            'Batch_Name' => $batch->Batch_Name,
+                            'Total_Leads' => $batch->assignedLeads->count(),
+                            'Completed_Leads' => $batch->assignedLeads->where('Completed', true)->count(),
+                            'Leads' => $batch->assignedLeads->map(function ($lead) {
+                                $business = $lead->masterLead ? $lead->masterLead->business : null;
+                                return [
+                                    'Assigned_Lead_ID' => $lead->Assigned_Lead_ID,
+                                    'Business_Name' => $business ? $business->Business_Name : 'Unknown',
+                                    'Date_Assigned' => $lead->Date_Assigned,
+                                    'Completed' => (bool) $lead->Completed,
+                                    'Responded' => (bool) $lead->Responded,
+                                    'Meeting_Booked' => (bool) $lead->Meeting_Booked,
+                                    'Inquiry_Type' => $lead->inquiries->first()->Inquiry_Type ?? 'None',
+                                    'Remarks' => $lead->Remarks
+                                ];
+                            })->values()
+                        ];
+                    })->values()
+                ];
+            })->values();
+
+            return response()->json($grouped, 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch summary: ' . $e->getMessage()], 500);
         }
     }
     
