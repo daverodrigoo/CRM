@@ -394,5 +394,38 @@ class LeadController extends Controller
             return response()->json(['error' => 'Failed to fetch summary: ' . $e->getMessage()], 500);
         }
     }
+
+    // --- Get Lead History (Only Completed, Responded, and Contacted) ---
+    public function getLeadHistory($leadId)
+    {
+        try {
+            $history = AssignedLead::with(['batch.user', 'inquiries'])
+                ->where('Lead_ID', $this->safeString($leadId))
+                ->where('Completed', true)
+                ->where('Responded', true)
+                ->whereHas('inquiries', function($query) {
+                    $query->whereNotNull('Inquiry_Type')
+                          ->where('Inquiry_Type', '!=', 'None')
+                          ->where('Inquiry_Type', '!=', '');
+                })
+                ->orderBy('updated_at', 'desc')
+                ->get();
+
+            $formattedHistory = $history->map(function ($assignedLead) {
+                return [
+                    'Batch_Name' => $assignedLead->batch ? $assignedLead->batch->Batch_Name : 'Unknown',
+                    'Assigned_To' => ($assignedLead->batch && $assignedLead->batch->user) ? $assignedLead->batch->user->name : 'Unknown',
+                    'Inquiry_Type' => $assignedLead->inquiries->first() ? $assignedLead->inquiries->first()->Inquiry_Type : 'None',
+                    'Responded' => $assignedLead->Responded ? 'Yes' : 'No',
+                    'Meeting_Booked' => $assignedLead->Meeting_Booked ? 'Yes' : 'No',
+                    'Date_Completed' => $assignedLead->updated_at->format('M d, Y'),
+                ];
+            });
+
+            return response()->json($formattedHistory, 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch lead history: ' . $e->getMessage()], 500);
+        }
+    }
     
 }

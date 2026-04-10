@@ -131,6 +131,9 @@ export default function Leads() {
   const [formData, setFormData] = useState(emptyForm);
   const [isEditMode, setIsEditMode] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [modalTab, setModalTab] = useState('details'); 
+  const [leadHistory, setLeadHistory] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
@@ -184,6 +187,18 @@ useEffect(() => {
     }
   };
 
+  const fetchLeadHistory = async (leadId) => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await axios.get(`http://localhost:8000/api/leads/${leadId}/history`);
+      setLeadHistory(response.data);
+    } catch (error) {
+      console.error("Error fetching lead history:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
@@ -231,12 +246,14 @@ useEffect(() => {
   };
 
   const openViewModal = (lead) => {
-    setSelectedLead(lead);
-    setFormData({ ...lead, Social_Media: Array.isArray(lead.Social_Media) ? lead.Social_Media : [''] });
-    setIsEditMode(false);
-    setIsViewOpen(true);
-    setErrorMsg('');
-  };
+      setSelectedLead(lead);
+      setFormData({ ...lead, Social_Media: Array.isArray(lead.Social_Media) ? lead.Social_Media : [''] });
+      setIsEditMode(false);
+      setModalTab('details'); // Reset tab to details
+      fetchLeadHistory(lead.Lead_ID); // Fetch the history
+      setIsViewOpen(true);
+      setErrorMsg('');
+    };
 
   const handleSaveEdit = async (e) => {
       e.preventDefault();
@@ -320,11 +337,12 @@ const confirmAssign = async () => {
   };
 
   const closeModals = () => {
-    setIsAddOpen(false);
-    setIsViewOpen(false);
-    setIsEditMode(false);
-    setErrorMsg('');
-  };
+      setIsAddOpen(false);
+      setIsViewOpen(false);
+      setIsEditMode(false);
+      setModalTab('details'); // Reset tab state
+      setErrorMsg('');
+    };
 
   const handleImportClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
@@ -710,35 +728,111 @@ const confirmAssign = async () => {
         </div>
       )}
 
-      {/* RESTORED: View/Edit Modal */}
+      {/* --- View/Edit Modal with Tab Switcher --- */}
       {isViewOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            
+            {/* Modal Header with Tabs */}
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">{isEditMode ? 'Edit Lead' : 'Lead Details'} - {selectedLead?.Lead_ID}</h2>
-              <button onClick={closeModals} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div className="p-6 overflow-y-auto">
-              <LeadForm formData={formData} handleInputChange={handleInputChange} handleSocialMediaChange={handleSocialMediaChange} addSocialMedia={addSocialMedia} removeSocialMedia={removeSocialMedia} isReadonly={!isEditMode} isEditMode={isEditMode} />
-            </div>
-            <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <button onClick={() => setIsDeleteOpen(true)} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium transition-colors">Delete Lead</button>
-                <span className="text-red-600 text-sm font-semibold">{errorMsg && !errorMsg.includes('Failed to connect') ? errorMsg : ''}</span>
-              </div>
-              <div className="flex gap-3">
-                {!isEditMode ? (
+                <button
+                  onClick={() => setModalTab('details')}
+                  className={`text-xl transition-colors outline-none ${modalTab === 'details' ? 'font-bold text-gray-800' : 'font-semibold text-gray-400 hover:text-gray-600'}`}
+                >
+                  {isEditMode ? 'Edit Lead' : 'Lead Details'} - {selectedLead?.Lead_ID}
+                </button>
+                {!isEditMode && (
                   <>
-                    <button onClick={closeModals} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Close</button>
-                    <button onClick={() => { setIsEditMode(true); setErrorMsg(''); }} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Edit Details</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => { setFormData(selectedLead); setIsEditMode(false); setErrorMsg(''); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
-                    <button onClick={handleSaveEdit} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Save Changes</button>
+                    <span className="text-gray-300 text-xl font-light">|</span>
+                    <button
+                      onClick={() => setModalTab('history')}
+                      className={`text-xl transition-colors outline-none ${modalTab === 'history' ? 'font-bold text-[#7E3A99]' : 'font-semibold text-gray-400 hover:text-gray-600'}`}
+                    >
+                      History
+                    </button>
                   </>
                 )}
               </div>
+              <button onClick={closeModals} className="text-gray-400 hover:text-gray-600 text-2xl outline-none">&times;</button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto">
+              {modalTab === 'details' ? (
+                <LeadForm formData={formData} handleInputChange={handleInputChange} handleSocialMediaChange={handleSocialMediaChange} addSocialMedia={addSocialMedia} removeSocialMedia={removeSocialMedia} isReadonly={!isEditMode} isEditMode={isEditMode} />
+              ) : (
+                <div className="space-y-4">
+                  {isLoadingHistory ? (
+                    <p className="text-gray-500 text-center py-8">Loading lead history...</p>
+                  ) : leadHistory.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 italic">No history records found for this lead.</p>
+                      <p className="text-xs text-gray-400 mt-2">Only completed and responded assignments are recorded here.</p>
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
+                        <thead className="bg-[#7E3A99] text-white">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold">Batch Name</th>
+                            <th className="px-4 py-3 font-semibold text-center">Inquiry Type</th>
+                            <th className="px-4 py-3 font-semibold text-center">Responded</th>
+                            <th className="px-4 py-3 font-semibold text-center">Meeting Booked</th>
+                            <th className="px-4 py-3 font-semibold">Assigned To</th>
+                            <th className="px-4 py-3 font-semibold text-center">Date Completed</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                          {leadHistory.map((record, idx) => (
+                            <tr key={idx} className="hover:bg-purple-50 transition-colors">
+                              <td className="px-4 py-3 font-bold text-gray-800">{record.Batch_Name}</td>
+                              <td className="px-4 py-3 text-center font-medium text-gray-600">{record.Inquiry_Type}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">{record.Responded}</span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={record.Meeting_Booked === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Meeting_Booked}</span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 capitalize font-medium">{record.Assigned_To}</td>
+                              <td className="px-4 py-3 text-center text-gray-600 font-medium">{record.Date_Completed}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
+              {modalTab === 'details' ? (
+                <>
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setIsDeleteOpen(true)} className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium transition-colors">Delete Lead</button>
+                    <span className="text-red-600 text-sm font-semibold">{errorMsg && !errorMsg.includes('Failed to connect') ? errorMsg : ''}</span>
+                  </div>
+                  <div className="flex gap-3">
+                    {!isEditMode ? (
+                      <>
+                        <button onClick={closeModals} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Close</button>
+                        <button onClick={() => { setIsEditMode(true); setErrorMsg(''); }} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Edit Details</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => { setFormData(selectedLead); setIsEditMode(false); setErrorMsg(''); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
+                        <button onClick={handleSaveEdit} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Save Changes</button>
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="w-full flex justify-end">
+                  <button onClick={closeModals} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Close</button>
+                </div>
+              )}
             </div>
           </div>
         </div>

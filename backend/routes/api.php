@@ -33,3 +33,4 @@ Route::get('/leads/assigned/{userId}', [LeadController::class, 'getAssignedLeads
 
 Route::put('/leads/{id}', [LeadController::class, 'update']);
 Route::put('/leads/{id}/pipeline', [LeadController::class, 'updatePipeline']);
+Route::get('/leads/{id}/history', [LeadController::class, 'getLeadHistory']);

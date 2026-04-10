@@ -148,6 +148,9 @@ export default function Employee_AssignedLeads() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [modalTab, setModalTab] = useState('details'); 
+  const [leadHistory, setLeadHistory] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   useEffect(() => {
     fetchAssignedBatches();
@@ -170,6 +173,18 @@ export default function Employee_AssignedLeads() {
       }
     } catch (error) {
       console.error("Error fetching batches:", error);
+    }
+  };
+
+  const fetchLeadHistory = async (leadId) => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await axios.get(`http://localhost:8000/api/leads/${leadId}/history`);
+      setLeadHistory(response.data);
+    } catch (error) {
+      console.error("Error fetching lead history:", error);
+    } finally {
+      setIsLoadingHistory(false);
     }
   };
 
@@ -250,11 +265,10 @@ export default function Employee_AssignedLeads() {
   };
 
   // --- FIX: Perfectly unpacking and flattening the nested data ---
-  const openViewModal = (lead) => {
+    const openViewModal = (lead) => {
     const master = lead.master_data || {};
     const business = master.business || {};
     
-    // Safely extract social media array based on Laravel serialization
     const socialMediaRaw = business.social_media || business.socialMedia || [];
     let socialMediaLinks = [''];
     if (Array.isArray(socialMediaRaw) && socialMediaRaw.length > 0) {
@@ -263,8 +277,8 @@ export default function Employee_AssignedLeads() {
 
     const combinedData = { 
       ...emptyForm, 
-      ...master,        // Unpacks: Date_Added, Source, Tab_Category, Solution_Needed
-      ...business,      // Unpacks: Industry, Phone, Email, Business_Owner, Contact_Person, etc.
+      ...master,        
+      ...business,      
       Business_Name: lead.Business_Name,
       Social_Media: socialMediaLinks,
       Remarks: master.Remarks || master.Pipeline_Remarks || '' 
@@ -272,8 +286,17 @@ export default function Employee_AssignedLeads() {
     
     setSelectedLead(lead);
     setFormData(combinedData);
+    setModalTab('details'); // Reset tab state
+    fetchLeadHistory(lead.Lead_ID); // Load the history
     setIsViewOpen(true);
   };
+
+  const closeModals = () => {
+    setIsViewOpen(false);
+    setModalTab('details'); // Reset tab state
+  };
+
+
 
   const activeBatch = batches.find(b => b.Batch_ID === activeBatchId);
   const leads = activeBatch ? activeBatch.leads : [];
@@ -476,16 +499,84 @@ export default function Employee_AssignedLeads() {
         </div>
       </main>
 
-      {/* --- MODAL --- */}
+      {/* --- View Modal with Tab Switcher --- */}
       {isViewOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-down">
+            
+            {/* Modal Header with Tabs */}
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">Lead Details - {selectedLead ? selectedLead.Lead_ID : ''}</h2>
-              <button onClick={() => setIsViewOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl outline-none">&times;</button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setModalTab('details')}
+                  className={`text-xl transition-colors outline-none ${modalTab === 'details' ? 'font-bold text-gray-800' : 'font-semibold text-gray-400 hover:text-gray-600'}`}
+                >
+                  Lead Details - {selectedLead?.Lead_ID}
+                </button>
+                <span className="text-gray-300 text-xl font-light">|</span>
+                <button
+                  onClick={() => setModalTab('history')}
+                  className={`text-xl transition-colors outline-none ${modalTab === 'history' ? 'font-bold text-[#7E3A99]' : 'font-semibold text-gray-400 hover:text-gray-600'}`}
+                >
+                  History
+                </button>
+              </div>
+              <button onClick={closeModals} className="text-gray-400 hover:text-gray-600 text-2xl outline-none">&times;</button>
             </div>
-            <div className="p-6 overflow-y-auto"><LeadForm formData={formData} isReadonly={true} /></div>
-            <div className="px-6 py-4 border-t bg-gray-50 flex justify-end items-center"><button onClick={() => setIsViewOpen(false)} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Close</button></div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto">
+              {modalTab === 'details' ? (
+                <LeadForm formData={formData} isReadonly={true} />
+              ) : (
+                <div className="space-y-4">
+                  {isLoadingHistory ? (
+                    <p className="text-gray-500 text-center py-8">Loading lead history...</p>
+                  ) : leadHistory.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 italic">No history records found for this lead.</p>
+                      <p className="text-xs text-gray-400 mt-2">Only completed and responded assignments are recorded here.</p>
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
+                        <thead className="bg-[#7E3A99] text-white">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold">Batch Name</th>
+                            <th className="px-4 py-3 font-semibold text-center">Inquiry Type</th>
+                            <th className="px-4 py-3 font-semibold text-center">Responded</th>
+                            <th className="px-4 py-3 font-semibold text-center">Meeting Booked</th>
+                            <th className="px-4 py-3 font-semibold">Assigned To</th>
+                            <th className="px-4 py-3 font-semibold text-center">Date Completed</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                          {leadHistory.map((record, idx) => (
+                            <tr key={idx} className="hover:bg-purple-50 transition-colors">
+                              <td className="px-4 py-3 font-bold text-gray-800">{record.Batch_Name}</td>
+                              <td className="px-4 py-3 text-center font-medium text-gray-600">{record.Inquiry_Type}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">{record.Responded}</span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={record.Meeting_Booked === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Meeting_Booked}</span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 capitalize font-medium">{record.Assigned_To}</td>
+                              <td className="px-4 py-3 text-center text-gray-600 font-medium">{record.Date_Completed}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t bg-gray-50 flex justify-end items-center">
+              <button onClick={closeModals} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Close</button>
+            </div>
           </div>
         </div>
       )}
