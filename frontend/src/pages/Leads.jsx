@@ -779,6 +779,7 @@ const confirmAssign = async () => {
                             <th className="px-4 py-3 font-semibold text-center">Inquiry Type</th>
                             <th className="px-4 py-3 font-semibold text-center">Responded</th>
                             <th className="px-4 py-3 font-semibold text-center">Meeting Booked</th>
+                            <th className="px-4 py-3 font-semibold text-center">Point of Contact</th>
                             <th className="px-4 py-3 font-semibold">Assigned To</th>
                             <th className="px-4 py-3 font-semibold text-center">Date Completed</th>
                           </tr>
@@ -794,6 +795,7 @@ const confirmAssign = async () => {
                               <td className="px-4 py-3 text-center">
                                 <span className={record.Meeting_Booked === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Meeting_Booked}</span>
                               </td>
+                              <td className="px-4 py-3 text-center text-gray-600 font-medium whitespace-nowrap">{record.Point_of_Contact}</td>
                               <td className="px-4 py-3 text-gray-600 capitalize font-medium">{record.Assigned_To}</td>
                               <td className="px-4 py-3 text-center text-gray-600 font-medium">{record.Date_Completed}</td>
                             </tr>

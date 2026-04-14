@@ -13,7 +13,7 @@ const emptyForm = {
 };
 
 const OPTIONS = {
-  Inquiry_Type: ['Cold Call', 'Email', 'Message'],
+  Inquiry_Type: ['Cold Call', 'Email', 'Message'], 
   Responded: ['Yes', 'No'],
   Meeting_Booked: ['Yes', 'No']
 };
@@ -29,6 +29,110 @@ const getChipColor = (value) => {
     case 'None': return 'bg-white text-gray-400 border border-gray-200 hover:bg-gray-50';
     default: return 'bg-gray-100 text-gray-600 hover:bg-gray-200';
   }
+};
+
+
+// --- NEW LOGIC: Dynamic Point of Contact Generator ---
+const getContactOptions = (lead) => {
+  // 1. Flatten the data EXACTLY like the View Modal does to guarantee we find the data
+  const master = lead.master_data || {};
+  const business = master.business || {};
+  
+  const combined = {
+    ...master,
+    ...business,
+    ...lead
+  };
+
+  // 2. Safely grab the active inquiry type
+  const inquiryType = (lead.inquiries && lead.inquiries) ? String(lead.inquiries).trim() : 'None';
+  let options = [];
+
+  // 3. Helper function to ensure we don't push empty/null values
+  const addOption = (label, value) => {
+    const strVal = value ? String(value).trim() : '';
+    if (strVal && strVal !== 'N/A' && strVal !== 'undefined' && strVal !== 'null') {
+      options.push(`${label} - ${strVal}`);
+    }
+  };
+
+  // 4. Route the options based on the selected type
+  if (inquiryType === 'Cold Call') {
+    addOption('Business Owner Phone', combined.Business_Owner_Phone);
+    addOption('Contact Person Phone', combined.Contact_Person_Phone);
+    addOption('Business Phone', combined.Business_Phone);
+  } 
+  else if (inquiryType === 'Email') {
+    addOption('Business Owner Email', combined.Business_Owner_Email);
+    addOption('Contact Person Email', combined.Contact_Person_Email);
+    addOption('Business Email', combined.Business_Email);
+  } 
+  else if (inquiryType === 'Message') {
+    const socialMediaRaw = business.social_media || business.socialMedia || [];
+    if (Array.isArray(socialMediaRaw)) {
+      socialMediaRaw.forEach(sm => {
+        const url = sm.URL || sm.url || (typeof sm === 'string' ? sm : null);
+        addOption('Social Media', url);
+      });
+    }
+  }
+
+  // 5. Fallback only if absolutely no data matched the criteria
+  if (options.length === 0 && inquiryType !== 'None') {
+    options.push('No contact details found');
+  }
+
+  return options;
+};
+
+// --- NEW COMPONENT: Wide Dropdown for Point of Contact ---
+const ContactSelect = ({ value, options, onChange, isOpen, onToggle, inquiryType }) => {
+  const safeValue = value ? String(value).trim() : 'None';
+  
+  let displayText = safeValue;
+  if (safeValue === 'None' || !safeValue) {
+      displayText = inquiryType === 'None' ? 'Select Type First' : 'Select POC';
+  }
+
+  return (
+    <div className="relative inline-block text-left w-full min-w-[160px] max-w-[220px] mx-auto">
+      <button 
+        type="button" 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          if (options.length > 0) onToggle(); 
+        }} 
+        className={`relative z-40 flex items-center justify-between w-full px-2.5 py-1.5 text-[11px] font-semibold leading-tight rounded border transition-colors ${
+          safeValue !== 'None' && safeValue ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+        } ${options.length === 0 ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        <span className="truncate mr-2" title={displayText}>{displayText}</span>
+        {options.length > 0 && (
+          <svg width="8" height="6" viewBox="0 0 7 5" fill="currentColor" className="opacity-70 flex-shrink-0"><path d="M3.5 5L0 0H7L3.5 5Z" /></svg>
+        )}
+      </button>
+
+      {isOpen && options.length > 0 && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[240px] bg-white rounded-lg shadow-[0_2px_15px_rgba(0,0,0,0.15)] border border-gray-100 z-50 py-1.5 overflow-hidden animate-fade-in-down">
+          {options.map((opt, idx) => {
+            const isNoDetails = opt === 'No contact details found';
+            return (
+              <div 
+                key={idx} 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (!isNoDetails) onChange(opt); 
+                }} 
+                className={`px-3 py-2 text-[11px] font-medium transition-colors break-words ${isNoDetails ? 'text-gray-400 italic cursor-default' : safeValue === opt ? 'bg-blue-50 text-blue-700 cursor-pointer' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
+              >
+                {opt}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const LeadForm = ({ formData, isReadonly }) => {
@@ -238,7 +342,9 @@ export default function Employee_AssignedLeads() {
         leads: batch.leads.map(lead => {
           if (lead.Assigned_Lead_ID === assignedLeadId) {
             if (field === 'Inquiry_Type') {
-              return { ...lead, inquiries: newValue === 'None' ? [] : [newValue] };
+              // Auto-clear Point of Contact if they change the Inquiry Type
+              savePipelineField(assignedLeadId, 'Point_of_Contact', null);
+              return { ...lead, inquiries: newValue === 'None' ? [] : [newValue], Point_of_Contact: null };
             }
             return { ...lead, [field]: newValue === 'Yes' ? true : (newValue === 'No' ? false : newValue) };
           }
@@ -391,6 +497,7 @@ export default function Employee_AssignedLeads() {
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Date Assigned</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Inquiry Type</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Responded</th>
+                  <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Point of Contact</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap min-w-[250px] text-center">Remarks</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Meeting Booked</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Completed</th> {/* NEW COLUMN */}
@@ -399,7 +506,11 @@ export default function Employee_AssignedLeads() {
               </thead>
               
               <tbody className="divide-y divide-gray-200 bg-white">
-                {currentLeads.map((lead) => (
+                {currentLeads.map((lead) => {
+                  // Generate POC options for this specific lead dynamically
+                  const pocOptions = getContactOptions(lead);
+
+                  return (
                   <tr key={lead.Assigned_Lead_ID} className="hover:bg-purple-50/30 transition-colors group align-middle">
                     
                     <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white group-hover:bg-[#faf5fc] transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10">
@@ -429,6 +540,18 @@ export default function Employee_AssignedLeads() {
                         isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Responded`} 
                         onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-Responded`)} 
                         onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Responded', val)} 
+                      />
+                    </td>
+
+                    {/* --- THE NEW POINT OF CONTACT COLUMN --- */}
+                    <td className="px-3 py-3 text-center">
+                      <ContactSelect 
+                        value={lead.Point_of_Contact} 
+                        options={pocOptions}
+                        inquiryType={(lead.inquiries && lead.inquiries) || 'None'}
+                        isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-POC`} 
+                        onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-POC`)} 
+                        onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Point_of_Contact', val)} 
                       />
                     </td>
 
@@ -473,9 +596,10 @@ export default function Employee_AssignedLeads() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
                 
-                {currentLeads.length === 0 && (
+              {currentLeads.length === 0 && (
                   <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-500">There are no leads in this batch.</td></tr>
                 )}
               </tbody>
@@ -546,6 +670,7 @@ export default function Employee_AssignedLeads() {
                             <th className="px-4 py-3 font-semibold text-center">Inquiry Type</th>
                             <th className="px-4 py-3 font-semibold text-center">Responded</th>
                             <th className="px-4 py-3 font-semibold text-center">Meeting Booked</th>
+                            <th className="px-4 py-3 font-semibold text-center">Point of Contact</th>
                             <th className="px-4 py-3 font-semibold">Assigned To</th>
                             <th className="px-4 py-3 font-semibold text-center">Date Completed</th>
                           </tr>
@@ -561,6 +686,7 @@ export default function Employee_AssignedLeads() {
                               <td className="px-4 py-3 text-center">
                                 <span className={record.Meeting_Booked === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Meeting_Booked}</span>
                               </td>
+                              <td className="px-4 py-3 text-center text-gray-600 font-medium whitespace-nowrap">{record.Point_of_Contact}</td>
                               <td className="px-4 py-3 text-gray-600 capitalize font-medium">{record.Assigned_To}</td>
                               <td className="px-4 py-3 text-center text-gray-600 font-medium">{record.Date_Completed}</td>
                             </tr>

@@ -236,6 +236,7 @@ class LeadController extends Controller
                             'Assigned_Lead_ID' => $assignedLead->Assigned_Lead_ID,
                             'Date_Assigned' => $assignedLead->Date_Assigned,
                             'Responded' => (bool) $assignedLead->Responded,
+                            'Point_of_Contact' => $assignedLead->Point_of_Contact,
                             'Meeting_Booked' => (bool) $assignedLead->Meeting_Booked,
                             'Completed' => (bool) $assignedLead->Completed,
                             'Meeting_Date' => $assignedLead->Meeting_Date,
@@ -418,6 +419,7 @@ class LeadController extends Controller
                     'Inquiry_Type' => $assignedLead->inquiries->first() ? $assignedLead->inquiries->first()->Inquiry_Type : 'None',
                     'Responded' => $assignedLead->Responded ? 'Yes' : 'No',
                     'Meeting_Booked' => $assignedLead->Meeting_Booked ? 'Yes' : 'No',
+                    'Point_of_Contact' => $assignedLead->Point_of_Contact ? $assignedLead->Point_of_Contact : 'N/A',
                     'Date_Completed' => $assignedLead->updated_at->format('M d, Y'),
                 ];
             });
