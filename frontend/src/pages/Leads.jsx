@@ -731,7 +731,7 @@ const confirmAssign = async () => {
       {/* --- View/Edit Modal with Tab Switcher --- */}
       {isViewOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
             
             {/* Modal Header with Tabs */}
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">

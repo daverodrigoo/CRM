@@ -86,12 +86,34 @@ const getContactOptions = (lead) => {
 };
 
 // --- NEW COMPONENT: Wide Dropdown for Point of Contact ---
+// --- NEW COMPONENT: Wide Dropdown for Point of Contact ---
 const ContactSelect = ({ value, options, onChange, isOpen, onToggle, inquiryType }) => {
   const safeValue = value ? String(value).trim() : 'None';
   
+  // FIX: Convert the inquiryType array into a flat string so the colors match properly!
+  const safeInquiryType = inquiryType ? String(inquiryType).trim() : 'None';
+  
   let displayText = safeValue;
   if (safeValue === 'None' || !safeValue) {
-      displayText = inquiryType === 'None' ? 'Select Type First' : 'Select POC';
+      displayText = safeInquiryType === 'None' ? 'Select Type First' : 'Select POC';
+  }
+
+  // Determine colors based on the Inquiry Type
+  let buttonColors = 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50';
+  let activeOptionColors = 'bg-gray-50 text-gray-700';
+
+  if (safeValue !== 'None' && safeValue) {
+    if (safeInquiryType === 'Cold Call') {
+        buttonColors = 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100';
+        activeOptionColors = 'bg-orange-50 text-orange-700';
+    } else if (safeInquiryType === 'Message') {
+        buttonColors = 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100';
+        activeOptionColors = 'bg-purple-50 text-purple-700';
+    } else {
+        // Defaults to Email (Blue) styling
+        buttonColors = 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100';
+        activeOptionColors = 'bg-blue-50 text-blue-700';
+    }
   }
 
   return (
@@ -102,9 +124,7 @@ const ContactSelect = ({ value, options, onChange, isOpen, onToggle, inquiryType
           e.stopPropagation(); 
           if (options.length > 0) onToggle(); 
         }} 
-        className={`relative z-40 flex items-center justify-between w-full px-2.5 py-1.5 text-[11px] font-semibold leading-tight rounded border transition-colors ${
-          safeValue !== 'None' && safeValue ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
-        } ${options.length === 0 ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`relative z-40 flex items-center justify-between w-full px-2.5 py-1.5 text-[11px] font-semibold leading-tight rounded border transition-colors ${buttonColors} ${options.length === 0 ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <span className="truncate mr-2" title={displayText}>{displayText}</span>
         {options.length > 0 && (
@@ -123,7 +143,7 @@ const ContactSelect = ({ value, options, onChange, isOpen, onToggle, inquiryType
                   e.stopPropagation(); 
                   if (!isNoDetails) onChange(opt); 
                 }} 
-                className={`px-3 py-2 text-[11px] font-medium transition-colors break-words ${isNoDetails ? 'text-gray-400 italic cursor-default' : safeValue === opt ? 'bg-blue-50 text-blue-700 cursor-pointer' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
+                className={`px-3 py-2 text-[11px] font-medium transition-colors break-words ${isNoDetails ? 'text-gray-400 italic cursor-default' : safeValue === opt ? `${activeOptionColors} cursor-pointer` : 'text-gray-700 hover:bg-gray-50 cursor-pointer'}`}
               >
                 {opt}
               </div>
@@ -626,7 +646,7 @@ export default function Employee_AssignedLeads() {
       {/* --- View Modal with Tab Switcher --- */}
       {isViewOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-down">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-down">
             
             {/* Modal Header with Tabs */}
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
