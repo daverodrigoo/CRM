@@ -275,6 +275,11 @@ export default function Employee_AssignedLeads() {
   const [modalTab, setModalTab] = useState('details'); 
   const [leadHistory, setLeadHistory] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  // --- SCHEDULE APPOINTMENT STATES ---
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [scheduleLead, setScheduleLead] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({ Meeting_Date: '', Meeting_Time: '', Service_Offered: '' });
+  const [scheduleError, setScheduleError] = useState('');
 
   useEffect(() => {
     fetchAssignedBatches();
@@ -422,7 +427,42 @@ export default function Employee_AssignedLeads() {
     setModalTab('details'); // Reset tab state
   };
 
+// --- SCHEDULE APPOINTMENT LOGIC ---
+  const handleScheduleClick = (lead) => {
+    // Safely extract values to check
+    const inquiryType = (lead.inquiries && lead.inquiries) ? String(lead.inquiries).trim() : 'None';
+    const poc = lead.Point_of_Contact ? String(lead.Point_of_Contact).trim() : 'None';
+    
+    // Condition Checks
+    const hasInquiry = inquiryType !== 'None' && inquiryType !== '';
+    const hasResponded = lead.Responded === true;
+    const hasPOC = poc !== 'None' && poc !== '';
+    const hasMeeting = lead.Meeting_Booked === true;
+    const isCompleted = lead.Completed === true;
 
+    // Only open if ALL conditions are met
+    if (hasInquiry && hasResponded && hasPOC && hasMeeting && isCompleted) {
+      setScheduleLead(lead);
+      setScheduleForm({ Meeting_Date: lead.Meeting_Date || '', Meeting_Time: lead.Meeting_Time || '', Service_Offered: lead.Service_Offered || '' });
+      setScheduleError('');
+      setIsScheduleOpen(true);
+    } else {
+      // Soft alert so the employee understands why the button isn't working
+      alert("Cannot schedule yet. The lead must have an Inquiry Type, Point of Contact, Responded = Yes, Meeting Booked = Yes, and Completed = True.");
+    }
+  };
+
+  const handleBookSubmit = () => {
+    // Validation
+    if (!scheduleForm.Meeting_Date || !scheduleForm.Meeting_Time || !scheduleForm.Service_Offered.trim()) {
+      setScheduleError("Meeting Date, Meeting Time, and Service Offered are all required to proceed.");
+      return;
+    }
+    
+    // Placeholder for future database saving
+    alert("Booking details are valid! Database functionality will be added later.");
+    // setIsScheduleOpen(false); 
+  };
 
   const activeBatch = batches.find(b => b.Batch_ID === activeBatchId);
   const leads = activeBatch ? activeBatch.leads : [];
@@ -611,10 +651,14 @@ export default function Employee_AssignedLeads() {
                     </td>
 
                     <td className="px-4 py-3 text-center">
-                      <button className="p-1.5 text-[#7E3A99] hover:text-[#19a828] hover:bg-purple-50 rounded-md transition-colors" title="Schedule Appointment">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor" className="w-5 h-5 mx-auto"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" /></svg>
-                      </button>
-                    </td>
+                        <button 
+                          onClick={() => handleScheduleClick(lead)}
+                          className="p-1.5 text-[#7E3A99] hover:text-[#19a828] hover:bg-purple-50 rounded-md transition-colors" 
+                          title="Schedule Appointment"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor" className="w-5 h-5 mx-auto"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" /></svg>
+                        </button>
+                      </td>
                   </tr>
                 );
               })}
@@ -726,6 +770,73 @@ export default function Employee_AssignedLeads() {
           </div>
         </div>
       )}
+
+      {/* --- Schedule Appointment Modal --- */}
+      {isScheduleOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-down">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+              <h2 className="text-xl font-bold text-gray-800">Schedule Appointment</h2>
+              <button onClick={() => setIsScheduleOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl outline-none">&times;</button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto flex flex-col gap-6">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Booking for:</p>
+                <p className="text-xl font-bold text-[#7E3A99]">{scheduleLead?.Business_Name}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Meeting Date <span className="text-red-500">*</span></label>
+                <input 
+                  type="date" 
+                  value={scheduleForm.Meeting_Date}
+                  onChange={(e) => setScheduleForm({...scheduleForm, Meeting_Date: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20 outline-none transition-all bg-white" 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Meeting Time <span className="text-red-500">*</span></label>
+                <input 
+                  type="time" 
+                  value={scheduleForm.Meeting_Time}
+                  onChange={(e) => setScheduleForm({...scheduleForm, Meeting_Time: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20 outline-none transition-all bg-white" 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Service Offered <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  placeholder=""
+                  value={scheduleForm.Service_Offered}
+                  onChange={(e) => setScheduleForm({...scheduleForm, Service_Offered: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20 outline-none transition-all bg-white" 
+                />
+              </div>
+
+              {scheduleError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-semibold border border-red-100">
+                  {scheduleError}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3 items-center">
+              <button onClick={() => setIsScheduleOpen(false)} className="px-5 py-2 text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg font-bold transition-colors shadow-sm">Cancel</button>
+              <button onClick={handleBookSubmit} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-lg font-bold transition-colors shadow-sm">Book</button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

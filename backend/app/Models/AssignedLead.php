@@ -21,6 +21,7 @@ class AssignedLead extends Model
         'Meeting_Booked',
         'Completed',
         'Meeting_Date',
+        'Meeting_Time',
         'Meeting_Held',
         'Service_Offered',
         'Remarks',

@@ -240,6 +240,7 @@ class LeadController extends Controller
                             'Meeting_Booked' => (bool) $assignedLead->Meeting_Booked,
                             'Completed' => (bool) $assignedLead->Completed,
                             'Meeting_Date' => $assignedLead->Meeting_Date,
+                            'Meeting_Time' => $assignedLead->Meeting_Time,
                             'Meeting_Held' => (bool) $assignedLead->Meeting_Held,
                             'Remarks' => $assignedLead->Remarks,
                             'Service_Offered' => $assignedLead->Service_Offered,
