@@ -42,6 +42,7 @@ export default function Navbar() {
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Leads', path: '/leads' },
+        { name: 'Meeting', path: '/meeting' },
         { name: 'Assigned Leads', path: '/employee-assigned-leads' }
       ];
     } else {

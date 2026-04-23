@@ -768,7 +768,7 @@ const confirmAssign = async () => {
                   ) : leadHistory.length === 0 ? (
                     <div className="text-center py-8">
                       <p className="text-gray-500 italic">No history records found for this lead.</p>
-                      <p className="text-xs text-gray-400 mt-2">Only completed and responded assignments are recorded here.</p>
+                      <p className="text-xs text-gray-400 mt-2">Only fully processed assignments (completed with all pipeline fields filled) are recorded here.</p>
                     </div>
                   ) : (
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -790,7 +790,7 @@ const confirmAssign = async () => {
                               <td className="px-4 py-3 font-bold text-gray-800">{record.Batch_Name}</td>
                               <td className="px-4 py-3 text-center font-medium text-gray-600">{record.Inquiry_Type}</td>
                               <td className="px-4 py-3 text-center">
-                                <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">{record.Responded}</span>
+                                <span className={record.Responded === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Responded}</span>
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <span className={record.Meeting_Booked === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Meeting_Booked}</span>

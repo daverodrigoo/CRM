@@ -235,7 +235,7 @@ const AutoResizeTextarea = ({ value, onChange, onBlur, placeholder }) => {
 };
 
 const ChipSelect = ({ value, options, onChange, isOpen, onToggle }) => {
-  const safeValue = value ? String(value).trim() : 'None';
+  const safeValue = value ? String(value).trim() : '';
   
   return (
     <div className="relative inline-block text-left w-full max-w-[120px] mx-auto">
@@ -594,13 +594,13 @@ export default function Employee_AssignedLeads() {
                     </td>
 
                     <td className="px-3 py-3 text-center">
-                      <ChipSelect 
-                        value={lead.Responded ? 'Yes' : 'No'} 
-                        options={OPTIONS.Responded} 
-                        isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Responded`} 
-                        onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-Responded`)} 
-                        onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Responded', val)} 
-                      />
+                        <ChipSelect 
+                          value={lead.Responded === true ? 'Yes' : (lead.Responded === false ? 'No' : null)} 
+                          options={OPTIONS.Responded} 
+                          isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Responded`} 
+                          onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-Responded`)} 
+                          onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Responded', val)} 
+                        />
                     </td>
 
                     {/* --- THE NEW POINT OF CONTACT COLUMN --- */}
@@ -625,13 +625,13 @@ export default function Employee_AssignedLeads() {
                     </td>
                     
                     <td className="px-3 py-3 text-center">
-                      <ChipSelect 
-                        value={lead.Meeting_Booked ? 'Yes' : 'No'} 
-                        options={OPTIONS.Meeting_Booked} 
-                        isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Meeting_Booked`} 
-                        onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-Meeting_Booked`)} 
-                        onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Meeting_Booked', val)} 
-                      />
+                        <ChipSelect 
+                          value={lead.Meeting_Booked === true ? 'Yes' : (lead.Meeting_Booked === false ? 'No' : null)} 
+                          options={OPTIONS.Meeting_Booked} 
+                          isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Meeting_Booked`} 
+                          onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-Meeting_Booked`)} 
+                          onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Meeting_Booked', val)} 
+                        />
                     </td>
 
                     {/* NEW COMPLETED CHECKBOX */}
@@ -723,7 +723,7 @@ export default function Employee_AssignedLeads() {
                   ) : leadHistory.length === 0 ? (
                     <div className="text-center py-8">
                       <p className="text-gray-500 italic">No history records found for this lead.</p>
-                      <p className="text-xs text-gray-400 mt-2">Only completed and responded assignments are recorded here.</p>
+                      <p className="text-xs text-gray-400 mt-2">Only fully processed assignments (completed with all pipeline fields filled) are recorded here.</p>
                     </div>
                   ) : (
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -745,7 +745,7 @@ export default function Employee_AssignedLeads() {
                               <td className="px-4 py-3 font-bold text-gray-800">{record.Batch_Name}</td>
                               <td className="px-4 py-3 text-center font-medium text-gray-600">{record.Inquiry_Type}</td>
                               <td className="px-4 py-3 text-center">
-                                <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">{record.Responded}</span>
+                                <span className={record.Responded === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Responded}</span>
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <span className={record.Meeting_Booked === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Meeting_Booked}</span>

@@ -200,6 +200,8 @@ class LeadController extends Controller
                     'Batch_ID' => $batch->Batch_ID,
                     'Lead_ID' => $leadId,
                     'Date_Assigned' => now(),
+                    'Responded' => null,      // Explicitly set to null
+                    'Meeting_Booked' => null, // Explicitly set to null
                 ]);
             }
 
@@ -235,9 +237,9 @@ class LeadController extends Controller
                             // Pipeline Instance Data (The Photocopy)
                             'Assigned_Lead_ID' => $assignedLead->Assigned_Lead_ID,
                             'Date_Assigned' => $assignedLead->Date_Assigned,
-                            'Responded' => (bool) $assignedLead->Responded,
+                            'Responded' => is_null($assignedLead->Responded) ? null : (bool) $assignedLead->Responded,
                             'Point_of_Contact' => $assignedLead->Point_of_Contact,
-                            'Meeting_Booked' => (bool) $assignedLead->Meeting_Booked,
+                            'Meeting_Booked' => is_null($assignedLead->Meeting_Booked) ? null : (bool) $assignedLead->Meeting_Booked,
                             'Completed' => (bool) $assignedLead->Completed,
                             'Meeting_Date' => $assignedLead->Meeting_Date,
                             'Meeting_Time' => $assignedLead->Meeting_Time,
@@ -380,8 +382,8 @@ class LeadController extends Controller
                                     'Business_Name' => $business ? $business->Business_Name : 'Unknown',
                                     'Date_Assigned' => $lead->Date_Assigned,
                                     'Completed' => (bool) $lead->Completed,
-                                    'Responded' => (bool) $lead->Responded,
-                                    'Meeting_Booked' => (bool) $lead->Meeting_Booked,
+                                    'Responded' => is_null($lead->Responded) ? null : (bool) $lead->Responded,
+                                    'Meeting_Booked' => is_null($lead->Meeting_Booked) ? null : (bool) $lead->Meeting_Booked,
                                     'Inquiry_Type' => $lead->inquiries->first()->Inquiry_Type ?? 'None',
                                     'Remarks' => $lead->Remarks
                                 ];
@@ -404,7 +406,11 @@ class LeadController extends Controller
             $history = AssignedLead::with(['batch.user', 'inquiries'])
                 ->where('Lead_ID', $this->safeString($leadId))
                 ->where('Completed', true)
-                ->where('Responded', true)
+                ->whereNotNull('Responded')
+                ->whereNotNull('Meeting_Booked')
+                ->whereNotNull('Point_of_Contact')
+                ->where('Point_of_Contact', '!=', '')
+                ->where('Point_of_Contact', '!=', 'None')
                 ->whereHas('inquiries', function($query) {
                     $query->whereNotNull('Inquiry_Type')
                           ->where('Inquiry_Type', '!=', 'None')

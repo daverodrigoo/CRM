@@ -178,8 +178,8 @@ export default function AssignedLeads() {
                           )}
                         </td>
                         <td className="px-3 py-4 text-center whitespace-nowrap font-medium text-gray-600">{lead.Inquiry_Type}</td>
-                        <td className="px-3 py-4 text-center whitespace-nowrap font-medium text-gray-600">{lead.Responded ? 'Yes' : 'No'}</td>
-                        <td className="px-3 py-4 text-center whitespace-nowrap font-medium text-gray-600">{lead.Meeting_Booked ? 'Yes' : 'No'}</td>
+                        <td className="px-3 py-4 text-center whitespace-nowrap font-medium text-gray-600">{lead.Responded === true ? 'Yes' : (lead.Responded === false ? 'No' : '-')}</td>
+                        <td className="px-3 py-4 text-center whitespace-nowrap font-medium text-gray-600">{lead.Meeting_Booked === true ? 'Yes' : (lead.Meeting_Booked === false ? 'No' : '-')}</td>
                         <td className="px-3 py-4 text-gray-600 max-w-[200px] truncate" title={lead.Remarks}>
                           {lead.Remarks || '-'}
                         </td>
