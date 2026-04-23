@@ -778,7 +778,7 @@ const confirmAssign = async () => {
                             <th className="px-4 py-3 font-semibold">Batch Name</th>
                             <th className="px-4 py-3 font-semibold text-center">Inquiry Type</th>
                             <th className="px-4 py-3 font-semibold text-center">Responded</th>
-                            <th className="px-4 py-3 font-semibold text-center">Meeting Booked</th>
+                            <th className="px-4 py-3 font-semibold text-center">Agree Meeting</th>
                             <th className="px-4 py-3 font-semibold text-center">Point of Contact</th>
                             <th className="px-4 py-3 font-semibold">Assigned To</th>
                             <th className="px-4 py-3 font-semibold text-center">Date Completed</th>

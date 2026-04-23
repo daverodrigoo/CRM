@@ -278,11 +278,13 @@ export default function Employee_AssignedLeads() {
   // --- SCHEDULE APPOINTMENT STATES ---
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [scheduleLead, setScheduleLead] = useState(null);
-  const [scheduleForm, setScheduleForm] = useState({ Meeting_Date: '', Meeting_Time: '', Service_Offered: '' });
+  const [scheduleForm, setScheduleForm] = useState({ Meeting_Date: '', Meeting_Time: '', Meeting_Type: '', Meeting_Assigned_to: '', Meeting_Notes: '', Service_Offered: '' });
   const [scheduleError, setScheduleError] = useState('');
+  const [adminUsers, setAdminUsers] = useState([]);
 
   useEffect(() => {
     fetchAssignedBatches();
+    fetchAdmins();
     const handleWindowClick = () => setActiveDropdown(null);
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
@@ -302,6 +304,17 @@ export default function Employee_AssignedLeads() {
       }
     } catch (error) {
       console.error("Error fetching batches:", error);
+    }
+  };
+
+const fetchAdmins = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/api/employees');
+      // Filter out only the users with the 'Admin' role (checking lowercase 'role')
+      const adminsOnly = response.data.filter(user => user.role === 'Admin');
+      setAdminUsers(adminsOnly);
+    } catch (error) {
+      console.error("Error fetching admin users:", error);
     }
   };
 
@@ -443,19 +456,19 @@ export default function Employee_AssignedLeads() {
     // Only open if ALL conditions are met
     if (hasInquiry && hasResponded && hasPOC && hasMeeting && isCompleted) {
       setScheduleLead(lead);
-      setScheduleForm({ Meeting_Date: lead.Meeting_Date || '', Meeting_Time: lead.Meeting_Time || '', Service_Offered: lead.Service_Offered || '' });
+      setScheduleForm({ Meeting_Date: lead.Meeting_Date || '', Meeting_Time: lead.Meeting_Time || '', Meeting_Type: lead.Meeting_Type || '', Meeting_Assigned_to: lead.Meeting_Assigned_to || '', Meeting_Notes: lead.Meeting_Notes || '', Service_Offered: lead.Service_Offered || '' });
       setScheduleError('');
       setIsScheduleOpen(true);
     } else {
       // Soft alert so the employee understands why the button isn't working
-      alert("Cannot schedule yet. The lead must have an Inquiry Type, Point of Contact, Responded = Yes, Meeting Booked = Yes, and Completed = True.");
+      alert("Cannot schedule yet. The lead must have an Inquiry Type, Point of Contact, Responded = Yes, Agree Meeting = Yes, and Completed = True.");
     }
   };
 
   const handleBookSubmit = () => {
     // Validation
-    if (!scheduleForm.Meeting_Date || !scheduleForm.Meeting_Time || !scheduleForm.Service_Offered.trim()) {
-      setScheduleError("Meeting Date, Meeting Time, and Service Offered are all required to proceed.");
+    if (!scheduleForm.Meeting_Date || !scheduleForm.Meeting_Time || !scheduleForm.Meeting_Type || !scheduleForm.Meeting_Assigned_to || !scheduleForm.Service_Offered.trim()) {
+      setScheduleError("Meeting Date, Meeting Time, Meeting Type, Assigned to, and Service Offered are all required to proceed.");
       return;
     }
     
@@ -559,7 +572,7 @@ export default function Employee_AssignedLeads() {
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Responded</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Point of Contact</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap min-w-[250px] text-center">Remarks</th>
-                  <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Meeting Booked</th>
+                  <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Agree Meeting</th>
                   <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Completed</th> {/* NEW COLUMN */}
                   <th className="px-4 py-4 rounded-tr-lg"></th> 
                 </tr>
@@ -733,7 +746,7 @@ export default function Employee_AssignedLeads() {
                             <th className="px-4 py-3 font-semibold">Batch Name</th>
                             <th className="px-4 py-3 font-semibold text-center">Inquiry Type</th>
                             <th className="px-4 py-3 font-semibold text-center">Responded</th>
-                            <th className="px-4 py-3 font-semibold text-center">Meeting Booked</th>
+                            <th className="px-4 py-3 font-semibold text-center">Agree Meeting</th>
                             <th className="px-4 py-3 font-semibold text-center">Point of Contact</th>
                             <th className="px-4 py-3 font-semibold">Assigned To</th>
                             <th className="px-4 py-3 font-semibold text-center">Date Completed</th>
@@ -809,6 +822,37 @@ export default function Employee_AssignedLeads() {
                 />
               </div>
 
+              {/* Meeting Type Dropdown */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Meeting Type <span className="text-red-500">*</span></label>
+                <select 
+                  value={scheduleForm.Meeting_Type}
+                  onChange={(e) => setScheduleForm({...scheduleForm, Meeting_Type: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20 outline-none transition-all bg-white" 
+                >
+                  <option value="" disabled>Select Type</option>
+                  <option value="Online">Online</option>
+                  <option value="Face-to-Face">Face-to-Face</option>
+                </select>
+              </div>
+
+              {/* Assigned To Dropdown (Dynamic Admins) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Assigned To <span className="text-red-500">*</span></label>
+                <select 
+                  value={scheduleForm.Meeting_Assigned_to}
+                  onChange={(e) => setScheduleForm({...scheduleForm, Meeting_Assigned_to: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20 outline-none transition-all bg-white" 
+                >
+                  <option value="" disabled>Select Admin</option>
+                  {adminUsers.map(admin => (
+                    <option key={admin.id} value={admin.id}>
+                      {admin.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Service Offered <span className="text-red-500">*</span></label>
                 <input 
@@ -817,6 +861,18 @@ export default function Employee_AssignedLeads() {
                   value={scheduleForm.Service_Offered}
                   onChange={(e) => setScheduleForm({...scheduleForm, Service_Offered: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20 outline-none transition-all bg-white" 
+                />
+              </div>
+
+              {/* Notes Textarea */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Notes</label>
+                <textarea 
+                  placeholder="Any specific details, links, or requests..."
+                  value={scheduleForm.Meeting_Notes}
+                  onChange={(e) => setScheduleForm({...scheduleForm, Meeting_Notes: e.target.value})}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:border-[#7E3A99] focus:ring-2 focus:ring-[#7E3A99]/20 outline-none transition-all bg-white resize-none" 
                 />
               </div>
 

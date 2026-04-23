@@ -157,7 +157,7 @@ export default function AssignedLeads() {
                       <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Status</th>
                       <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Inquiry Type</th>
                       <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Responded</th>
-                      <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Meeting Booked</th>
+                      <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap text-center">Agree Meeting</th>
                       <th className="px-3 py-4 font-semibold tracking-wider whitespace-nowrap">Remarks</th>
                     </tr>
                   </thead>
