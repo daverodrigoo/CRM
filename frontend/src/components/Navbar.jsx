@@ -42,8 +42,8 @@ export default function Navbar() {
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Leads', path: '/leads' },
-        { name: 'Meeting', path: '/meeting' },
-        { name: 'Assigned Leads', path: '/employee-assigned-leads' }
+        { name: 'Assigned Leads', path: '/employee-assigned-leads' },
+        { name: 'Meeting', path: '/meeting' }
       ];
     } else {
       // Viewer Role Navbar Configuration
