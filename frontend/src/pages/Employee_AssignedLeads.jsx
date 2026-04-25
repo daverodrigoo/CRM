@@ -465,16 +465,50 @@ const fetchAdmins = async () => {
     }
   };
 
-  const handleBookSubmit = () => {
+const handleBookSubmit = async () => {
     // Validation
     if (!scheduleForm.Meeting_Date || !scheduleForm.Meeting_Time || !scheduleForm.Meeting_Type || !scheduleForm.Meeting_Assigned_to || !scheduleForm.Service_Offered.trim()) {
-      setScheduleError("Meeting Date, Meeting Time, Meeting Type, Assigned to, and Service Offered are all required to proceed.");
+      setScheduleError("Meeting Date, Meeting Time, Meeting Type, Assigned To, and Service Offered are all required to proceed.");
       return;
     }
     
-    // Placeholder for future database saving
-    alert("Booking details are valid! Database functionality will be added later.");
-    // setIsScheduleOpen(false); 
+    try {
+      // 1. Send the data to the backend to save and assign to the Admin
+      await axios.put(`http://localhost:8000/api/assigned-leads/${scheduleLead.Assigned_Lead_ID}/book-meeting`, {
+        Meeting_Date: scheduleForm.Meeting_Date,
+        Meeting_Time: scheduleForm.Meeting_Time,
+        Meeting_Type: scheduleForm.Meeting_Type,
+        Meeting_Assigned_to: scheduleForm.Meeting_Assigned_to,
+        Service_Offered: scheduleForm.Service_Offered,
+        Meeting_Notes: scheduleForm.Meeting_Notes
+      });
+
+      // 2. Update the frontend table so the user sees the new data instantly
+      setBatches(batches.map(batch => {
+        if (batch.Batch_ID !== activeBatchId) return batch;
+        return {
+          ...batch,
+          leads: batch.leads.map(lead => 
+            lead.Assigned_Lead_ID === scheduleLead.Assigned_Lead_ID 
+              ? { 
+                  ...lead, 
+                  ...scheduleForm, 
+                  Meeting_Booked: true // Automatically flip the dropdown chip to "Yes"
+                } 
+              : lead
+          )
+        };
+      }));
+
+      // 3. Close the modal and notify the user
+      alert("Meeting successfully booked and transferred to the assigned Admin!");
+      setIsScheduleOpen(false);
+      setScheduleError('');
+
+    } catch (error) {
+      console.error("Error booking meeting:", error);
+      setScheduleError("Failed to book meeting. Please check your connection and try again.");
+    }
   };
 
   const activeBatch = batches.find(b => b.Batch_ID === activeBatchId);

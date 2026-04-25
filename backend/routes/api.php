@@ -30,6 +30,8 @@ Route::put('/employees/{id}', [EmployeeController::class, 'update']);
 Route::delete('/employees/{id}', [EmployeeController::class, 'destroy']);
 Route::post('/leads/assign', [LeadController::class, 'assignLeads']);
 Route::get('/leads/assigned/{userId}', [LeadController::class, 'getAssignedLeads']);
+Route::put('/assigned-leads/{id}/book-meeting', [App\Http\Controllers\Api\LeadController::class, 'bookMeeting']);
+Route::get('/meetings/admin/{userId}', [App\Http\Controllers\Api\LeadController::class, 'getAdminMeetings']);
 
 Route::put('/leads/{id}', [LeadController::class, 'update']);
 Route::put('/leads/{id}/pipeline', [LeadController::class, 'updatePipeline']);

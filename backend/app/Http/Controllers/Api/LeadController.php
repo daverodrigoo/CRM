@@ -439,5 +439,67 @@ class LeadController extends Controller
             return response()->json(['error' => 'Failed to fetch lead history: ' . $e->getMessage()], 500);
         }
     }
+
+    // --- Book a Meeting & Transfer to Admin ---
+    public function bookMeeting(Request $request, $assignedLeadId)
+    {
+        $request->validate([
+            'Meeting_Date' => 'required|date',
+            'Meeting_Time' => 'required|string',
+            'Meeting_Type' => 'required|string',
+            'Meeting_Assigned_to' => 'required|exists:users,id',
+            'Service_Offered' => 'required|string',
+            'Meeting_Notes' => 'nullable|string',
+        ]);
+
+        try {
+            $assignedLead = AssignedLead::findOrFail($assignedLeadId);
+            
+            $assignedLead->update([
+                'Meeting_Date' => $request->Meeting_Date,
+                'Meeting_Time' => $request->Meeting_Time,
+                'Meeting_Type' => $request->Meeting_Type,
+                'Meeting_Assigned_to' => $request->Meeting_Assigned_to,
+                'Service_Offered' => $request->Service_Offered,
+                'Meeting_Notes' => $request->Meeting_Notes,
+                'Meeting_Booked' => true, // Auto-mark as booked!
+            ]);
+
+            return response()->json(['message' => 'Meeting successfully booked and transferred to Admin!'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to book meeting: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // --- Fetch Meetings for a Specific Admin ---
+    public function getAdminMeetings($userId)
+    {
+        try {
+            // FIX: Use 'masterLead.business' to match your AssignedLead.php model
+            $meetings = AssignedLead::with('masterLead.business')
+                ->where('Meeting_Assigned_to', $userId)
+                ->where(function($query) {
+                    // This ensures it grabs it whether your DB stores it as a boolean (1) or string ('Yes')
+                    $query->where('Meeting_Booked', true)
+                          ->orWhere('Meeting_Booked', 1)
+                          ->orWhere('Meeting_Booked', 'Yes'); 
+                })
+                ->orderBy('Meeting_Date', 'asc')
+                ->orderBy('Meeting_Time', 'asc')
+                ->get()
+                ->map(function ($assignedLead) {
+                    $item = $assignedLead->toArray();
+                    // Pull the business name out and attach it directly so the frontend can read it perfectly
+                    $item['Business_Name'] = $assignedLead->masterLead->business->Business_Name ?? 'Unknown Business';
+                    return $item;
+                });
+
+            return response()->json($meetings, 200);
+        } catch (\Exception $e) {
+            // Logging the error so if it fails again, you can check storage/logs/laravel.log for the exact issue
+            \Log::error("Meeting Fetch Error: " . $e->getMessage()); 
+            return response()->json(['error' => 'Failed to fetch meetings: ' . $e->getMessage()], 500);
+        }
+    }
     
 }

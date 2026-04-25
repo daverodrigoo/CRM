@@ -61,10 +61,7 @@ const ChipSelect = ({ value, options, onChange, isOpen, onToggle }) => {
 
 // --- Main Page Component ---
 export default function Meeting() {
-  const [meetings, setMeetings] = useState([
-    { Assigned_Lead_ID: 1, Business_Name: 'Acme Corp', Meeting_Date: '2026-05-01', Meeting_Time: '10:00 AM', Meeting_Type: 'Online', Remarks: 'Wants a full CRM overhaul.', Meeting_Notes: 'Send link via Zoom.', Service_Offered: 'Custom CRM', Admin_Notes: '', Completed: false, Deal_Closed: null },
-    { Assigned_Lead_ID: 2, Business_Name: 'TechFlow Inc', Meeting_Date: '2026-05-02', Meeting_Time: '02:30 PM', Meeting_Type: 'Face-to-Face', Remarks: 'Interested in AI tools.', Meeting_Notes: 'Meeting at their downtown office.', Service_Offered: 'AI Integration', Admin_Notes: 'They loved the demo.', Completed: true, Deal_Closed: 'Yes' }
-  ]);
+  const [meetings, setMeetings] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState('10');
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -74,6 +71,24 @@ export default function Meeting() {
   const [viewLead, setViewLead] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   const [leadHistory, setLeadHistory] = useState([]);
+
+  // --- FETCH MEETINGS ON LOAD ---
+  useEffect(() => {
+    fetchMeetings();
+  }, []);
+
+  const fetchMeetings = async () => {
+    const userId = localStorage.getItem('USER_ID');
+    if (!userId) return;
+
+    try {
+      const response = await axios.get(`http://localhost:8000/api/meetings/admin/${userId}`);
+      setMeetings(response.data);
+    } catch (error) {
+      console.error("Error fetching meetings:", error);
+    }
+  };
+
 
   // Pagination Setup
   const totalItems = meetings.length;
