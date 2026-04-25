@@ -3,8 +3,16 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 
 // --- Helper Data & Components ---
+const emptyForm = {
+  Lead_ID: '', Date_Added: '', Business_Name: '', 
+  Contact_Person_First_Name: '', Contact_Last_Name: '', Contact_Person_Phone: '', Contact_Person_Email: '',
+  Business_Owner_First_Name: '', Business_Owner_Last_Name: '', Business_Owner_Phone: '', Business_Owner_Email: '',
+  Business_Phone: '', Business_Email: '', Tab_Category: '',
+  Solution_Needed: '', Website_Link: '', Industry: '', Source: '', 
+  Social_Media: [''], Remarks: ''
+};
+
 const OPTIONS = {
-  Meeting_Type: ['Online', 'Face-to-Face'],
   Deal_Closed: ['Yes', 'No']
 };
 
@@ -13,11 +21,64 @@ const getChipColor = (value) => {
   switch (safeVal) {
     case 'Yes': return 'bg-green-100 text-green-700 hover:bg-green-200'; 
     case 'No': return 'bg-red-100 text-red-700 hover:bg-red-200'; 
-    case 'Online': return 'bg-blue-100 text-blue-700 hover:bg-blue-200'; 
-    case 'Face-to-Face': return 'bg-purple-100 text-purple-700 hover:bg-purple-200'; 
     case '': return 'bg-white text-gray-400 border border-gray-200 hover:bg-gray-50';
     default: return 'bg-gray-100 text-gray-600 hover:bg-gray-200';
   }
+};
+
+// --- LeadForm Component (Copied exactly from Employee_AssignedLeads.jsx) ---
+const LeadForm = ({ formData, isReadonly }) => {
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Name</label><input type="text" value={formData.Business_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Industry</label><input type="text" value={formData.Industry || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Date Added</label><input type="date" value={formData.Date_Added ? formData.Date_Added.split('T') : ''} disabled={true} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Phone</label><input type="text" value={formData.Business_Phone || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Email</label><input type="email" value={formData.Business_Email || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Website Link</label><input type="text" value={formData.Website_Link || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+        <h3 className="col-span-1 md:col-span-4 text-sm font-bold text-gray-700 border-b pb-2 mb-2">Business Owner</h3>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">First Name</label><input type="text" value={formData.Business_Owner_First_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Last Name</label><input type="text" value={formData.Business_Owner_Last_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Phone</label><input type="text" value={formData.Business_Owner_Phone || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Email</label><input type="email" value={formData.Business_Owner_Email || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+        <h3 className="col-span-1 md:col-span-4 text-sm font-bold text-gray-700 border-b pb-2 mb-2">Contact Person</h3>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">First Name</label><input type="text" value={formData.Contact_Person_First_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Last Name</label><input type="text" value={formData.Contact_Last_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Phone</label><input type="text" value={formData.Contact_Person_Phone || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Email</label><input type="email" value={formData.Contact_Person_Email || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Source</label><input type="text" value={formData.Source || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Tab Category</label><input type="text" value={formData.Tab_Category || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-gray-500">Social Media Links</label>
+        {formData.Social_Media && formData.Social_Media.map((link, index) => (
+          <input key={index} type="text" value={link || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 mb-2 bg-white" />
+        ))}
+        {(!formData.Social_Media || formData.Social_Media.length === 0) && (
+          <input type="text" value="N/A" disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 mb-2 bg-white" />
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-2">
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Solution Needed</label><textarea value={formData.Solution_Needed || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 h-24 bg-white"></textarea></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Remarks</label><textarea value={formData.Remarks || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 h-24 bg-white"></textarea></div>
+      </div>
+    </div>
+  );
 };
 
 const AutoResizeTextarea = ({ value, onChange, onBlur, placeholder, readOnly = false }) => {
@@ -55,6 +116,17 @@ const ChipSelect = ({ value, options, onChange, isOpen, onToggle }) => {
         <span className="truncate">{safeValue}</span>
         <svg width="7" height="5" viewBox="0 0 7 5" fill="currentColor" className="opacity-70 flex-shrink-0 mt-[1px]"><path d="M3.5 5L0 0H7L3.5 5Z" /></svg>
       </button>
+
+      {isOpen && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[130px] bg-white rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 py-1 overflow-hidden animate-fade-in-down">
+          {options.map((opt) => (
+            <div key={opt} onClick={(e) => { e.stopPropagation(); onChange(opt); }} className={`px-3 py-1.5 text-[12px] font-medium cursor-pointer transition-colors flex items-center gap-2 ${safeValue === opt ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getChipColor(opt).split(' ')}`}></div>
+              <span className="truncate">{opt}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -66,15 +138,20 @@ export default function Meeting() {
   const [itemsPerPage, setItemsPerPage] = useState('10');
   const [activeDropdown, setActiveDropdown] = useState(null);
 
-  // --- VIEW MODAL STATES ---
+  // --- VIEW MODAL STATES (Copied exactly from Employee_AssignedLeads) ---
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [viewLead, setViewLead] = useState(null);
-  const [activeTab, setActiveTab] = useState('details');
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [formData, setFormData] = useState(emptyForm);
+  const [modalTab, setModalTab] = useState('details'); 
   const [leadHistory, setLeadHistory] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // --- FETCH MEETINGS ON LOAD ---
   useEffect(() => {
     fetchMeetings();
+    const handleWindowClick = () => setActiveDropdown(null);
+    window.addEventListener('click', handleWindowClick);
+    return () => window.removeEventListener('click', handleWindowClick);
   }, []);
 
   const fetchMeetings = async () => {
@@ -89,7 +166,6 @@ export default function Meeting() {
     }
   };
 
-
   // Pagination Setup
   const totalItems = meetings.length;
   const actualItemsPerPage = itemsPerPage === 'All' ? totalItems : parseInt(itemsPerPage, 10);
@@ -100,25 +176,47 @@ export default function Meeting() {
 
   // --- MODAL HANDLERS ---
   const fetchLeadHistory = async (leadId) => {
+    setIsLoadingHistory(true);
     try {
-      const response = await axios.get(`http://localhost:8000/api/assigned-leads/${leadId}/history`);
+      const response = await axios.get(`http://localhost:8000/api/leads/${leadId}/history`);
       setLeadHistory(response.data);
     } catch (error) {
       console.error("Error fetching lead history:", error);
+    } finally {
+      setIsLoadingHistory(false);
     }
   };
 
   const openViewModal = (lead) => {
-    setViewLead(lead);
-    setActiveTab('details');
+    // Laravel toArray() outputs relationships in snake_case, so we check for master_lead
+    const master = lead.master_lead || lead.masterLead || {};
+    const business = master.business || {};
+    
+    const socialMediaRaw = business.social_media || business.socialMedia || [];
+    let socialMediaLinks = [''];
+    if (Array.isArray(socialMediaRaw) && socialMediaRaw.length > 0) {
+      socialMediaLinks = socialMediaRaw.map(sm => sm.URL || sm.url);
+    }
+
+    const combinedData = { 
+      ...emptyForm, 
+      ...master,        
+      ...business,      
+      Business_Name: lead.Business_Name,
+      Social_Media: socialMediaLinks,
+      Remarks: master.Remarks || master.Pipeline_Remarks || '' 
+    };
+    
+    setSelectedLead(lead);
+    setFormData(combinedData);
+    setModalTab('details'); 
+    fetchLeadHistory(lead.Lead_ID || master.Lead_ID); 
     setIsViewOpen(true);
-    fetchLeadHistory(lead.Lead_ID);
   };
 
-  const closeViewModal = () => {
+  const closeModals = () => {
     setIsViewOpen(false);
-    setViewLead(null);
-    setLeadHistory([]);
+    setModalTab('details');
   };
 
   const toggleDropdown = (id) => setActiveDropdown(activeDropdown === id ? null : id);
@@ -141,7 +239,6 @@ export default function Meeting() {
             <table className="min-w-full text-sm text-left border-collapse">
               
               <thead className="bg-[#7E3A99] text-white select-none">
-                {/* SINGLE HEADER ROW */}
                 <tr>
                   <th className="px-6 py-4 font-semibold tracking-wider whitespace-nowrap sticky left-0 bg-[#7E3A99] z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] rounded-tl-lg border-r border-purple-800">Business Name</th>
                   <th className="px-3 py-3 font-semibold tracking-wider whitespace-nowrap text-center">Date</th>
@@ -156,13 +253,12 @@ export default function Meeting() {
                 {currentMeetings.map((lead) => (
                   <React.Fragment key={lead.Assigned_Lead_ID}>
                     
-                    {/* TOP ROW (Date, Time, Type, Emp Remarks, Pre-Notes) */}
+                    {/* TOP ROW */}
                     <tr className="hover:bg-purple-50/20 transition-colors group/top align-middle">
-                      {/* Sticky Business Name spanning 2 rows */}
                       <td rowSpan="2" className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white border-b-2 border-gray-200 border-r border-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] z-10 align-top pt-6">
                         <button onClick={() => openViewModal(lead)} className="flex flex-col text-left group/btn outline-none">
                           <span className="font-bold text-[#7E3A99] group-hover/btn:text-[#19a828] transition-colors text-base">
-                            {lead.lead?.Business_Name || lead.Business_Name || 'Unknown Business'}
+                            {lead.Business_Name || 'Unknown Business'}
                           </span>
                         </button>
                       </td>
@@ -188,19 +284,18 @@ export default function Meeting() {
                       </td>
                     </tr>
 
-                    {/* BOTTOM ROW (With Inline Labels on Top) */}
+                    {/* BOTTOM ROW */}
                     <tr className="bg-gray-50/40 hover:bg-purple-50/30 transition-colors group/bottom align-top border-b-2 border-gray-200">
-                      
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-3 text-center border-r border-gray-100">
                         <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Service Offered</span>
                         <AutoResizeTextarea
                           value={lead.Service_Offered}
-                          placeholder="Add service..."
+                          placeholder="No service specified."
                           readOnly={true}
                         />
                       </td>
 
-                      <td colSpan="2" className="px-3 py-3 text-center">
+                      <td colSpan="2" className="px-3 py-3 text-center border-r border-gray-100">
                         <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Meeting Notes</span>
                         <AutoResizeTextarea
                           value={lead.Admin_Notes}
@@ -210,7 +305,7 @@ export default function Meeting() {
                         />
                       </td>
 
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-3 text-center border-r border-gray-100">
                         <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Completed</span>
                         <div className="flex items-center justify-center">
                           <input
@@ -236,7 +331,6 @@ export default function Meeting() {
                           onChange={(val) => handleDropdownChange(lead.Assigned_Lead_ID, 'Deal_Closed', val)} 
                         />
                       </td>
-
                     </tr>
                   </React.Fragment>
                 ))}
@@ -263,6 +357,88 @@ export default function Meeting() {
             </div>
           </div>
         </div>
+
+        {/* --- View Modal with Tab Switcher (Copied exactly from Employee_AssignedLeads) --- */}
+        {isViewOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-down">
+              
+              <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setModalTab('details')}
+                    className={`text-xl transition-colors outline-none ${modalTab === 'details' ? 'font-bold text-gray-800' : 'font-semibold text-gray-400 hover:text-gray-600'}`}
+                  >
+                    Lead Details - {selectedLead?.Lead_ID}
+                  </button>
+                  <span className="text-gray-300 text-xl font-light">|</span>
+                  <button
+                    onClick={() => setModalTab('history')}
+                    className={`text-xl transition-colors outline-none ${modalTab === 'history' ? 'font-bold text-[#7E3A99]' : 'font-semibold text-gray-400 hover:text-gray-600'}`}
+                  >
+                    History
+                  </button>
+                </div>
+                <button onClick={closeModals} className="text-gray-400 hover:text-gray-600 text-2xl outline-none">&times;</button>
+              </div>
+
+              <div className="p-6 overflow-y-auto">
+                {modalTab === 'details' ? (
+                  <LeadForm formData={formData} isReadonly={true} />
+                ) : (
+                  <div className="space-y-4">
+                    {isLoadingHistory ? (
+                      <p className="text-gray-500 text-center py-8">Loading lead history...</p>
+                    ) : leadHistory.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500 italic">No history records found for this lead.</p>
+                        <p className="text-xs text-gray-400 mt-2">Only fully processed assignments (completed with all pipeline fields filled) are recorded here.</p>
+                      </div>
+                    ) : (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
+                          <thead className="bg-[#7E3A99] text-white">
+                            <tr>
+                              <th className="px-4 py-3 font-semibold">Batch Name</th>
+                              <th className="px-4 py-3 font-semibold text-center">Inquiry Type</th>
+                              <th className="px-4 py-3 font-semibold text-center">Responded</th>
+                              <th className="px-4 py-3 font-semibold text-center">Agree Meeting</th>
+                              <th className="px-4 py-3 font-semibold text-center">Point of Contact</th>
+                              <th className="px-4 py-3 font-semibold">Assigned To</th>
+                              <th className="px-4 py-3 font-semibold text-center">Date Completed</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 bg-white">
+                            {leadHistory.map((record, idx) => (
+                              <tr key={idx} className="hover:bg-purple-50 transition-colors">
+                                <td className="px-4 py-3 font-bold text-gray-800">{record.Batch_Name}</td>
+                                <td className="px-4 py-3 text-center font-medium text-gray-600">{record.Inquiry_Type}</td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={record.Responded === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Responded}</span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={record.Meeting_Booked === 'Yes' ? 'bg-green-100 text-green-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider' : 'bg-red-100 text-red-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider'}>{record.Meeting_Booked}</span>
+                                </td>
+                                <td className="px-4 py-3 text-center text-gray-600 font-medium whitespace-nowrap">{record.Point_of_Contact}</td>
+                                <td className="px-4 py-3 text-gray-600 capitalize font-medium">{record.Assigned_To}</td>
+                                <td className="px-4 py-3 text-center text-gray-600 font-medium">{record.Date_Completed}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end items-center">
+                <button onClick={closeModals} className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
