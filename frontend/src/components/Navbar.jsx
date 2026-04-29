@@ -23,7 +23,7 @@ export default function Navbar() {
   const userRole = localStorage.getItem('USER_ROLE') || getStoredRole();
 
   const getNavItems = () => {
-    if (userRole === 'Super Admin') {
+    if (userRole === 'Super Admin' || userRole === 'Admin') {
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Leads', path: '/leads' },
@@ -37,13 +37,12 @@ export default function Navbar() {
           ]
         }
       ];
-    } else if (userRole === 'Admin') {
+    } else if (userRole === 'Employee') {
       // Admin Role Navbar Configuration
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Leads', path: '/leads' },
-        { name: 'Assigned Leads', path: '/employee-assigned-leads' },
-        { name: 'Meeting', path: '/meeting' }
+        { name: 'Assigned Leads', path: '/employee-assigned-leads' }
       ];
     } else {
       // Viewer Role Navbar Configuration

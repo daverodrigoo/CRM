@@ -156,10 +156,11 @@ useEffect(() => {
   const fetchAdmins = async () => {
     try {
       const response = await axios.get('http://localhost:8000/api/employees');
-      const adminUsers = response.data.filter(emp => (emp.role || '').toLowerCase() === 'admin');
-      setAdmins(adminUsers);
+      // FIX: Now filtering for 'employee' instead of 'admin'
+      const employeeUsers = response.data.filter(emp => (emp.role || '').toLowerCase() === 'employee');
+      setAdmins(employeeUsers);
     } catch (error) {
-      console.error("Error fetching admins:", error);
+      console.error("Error fetching employees:", error);
     }
   };
 
@@ -586,7 +587,7 @@ const confirmAssign = async () => {
                                       <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsEmployeeSelectOpen(false); }}></div>
                                       <div className="absolute left-0 top-full mt-1.5 w-full bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-1.5 max-h-48 overflow-y-auto">
                                         {admins.length === 0 ? (
-                                          <div className="px-4 py-3 text-sm text-gray-500 text-center italic">No Admins available</div>
+                                          <div className="px-4 py-3 text-sm text-gray-500 text-center italic">No Employees available</div>
                                         ) : (
                                           admins.map(admin => {
                                             const adminId = admin.id || admin.User_ID || admin.Employee_ID;

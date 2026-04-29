@@ -7,7 +7,7 @@ const emptyEmployeeForm = {
   id: '',
   name: '',
   email: '',
-  role: 'Viewer', 
+  role: 'Employee', 
   password: '',
 };
 
@@ -29,7 +29,7 @@ const EmployeeForm = ({ formData, handleInputChange, isReadonly, isEditMode }) =
         <div className="space-y-1">
           <label className="text-xs font-semibold text-gray-500">User Role <span className="text-red-500">*</span></label>
           <select name="role" value={formData.role} onChange={handleInputChange} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white">
-            <option value="Viewer">Viewer</option>
+            <option value="Employee">Employee</option>
             <option value="Admin">Admin</option>
             <option value="Super Admin">Super Admin</option>
           </select>
@@ -207,7 +207,7 @@ export default function Employees() {
     switch(role) {
       case 'Super Admin': return 'bg-red-100 text-red-800';
       case 'Admin': return 'bg-orange-100 text-orange-800';
-      case 'Viewer': return 'bg-blue-100 text-blue-800';
+      case 'Employee': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

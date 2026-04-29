@@ -310,9 +310,11 @@ export default function Employee_AssignedLeads() {
 const fetchAdmins = async () => {
     try {
       const response = await axios.get('http://localhost:8000/api/employees');
-      // Filter out only the users with the 'Admin' role (checking lowercase 'role')
-      const adminsOnly = response.data.filter(user => user.role === 'Admin');
-      setAdminUsers(adminsOnly);
+      // Fetch both Admin and Super Admin to populate the Schedule Appointment dropdown
+      const adminUsers = response.data.filter(user => 
+        user.role === 'Admin' || user.role === 'Super Admin'
+      );
+      setAdminUsers(adminUsers);
     } catch (error) {
       console.error("Error fetching admin users:", error);
     }

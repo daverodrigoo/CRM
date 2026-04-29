@@ -31,10 +31,10 @@ class DatabaseSeeder extends Seeder
 
         // 3. Create the Viewer test account
         User::create([
-            'name' => 'Viewer User',
-            'email' => 'viewer@chimes.com',
+            'name' => 'Employee User',
+            'email' => 'employee@chimes.com',
             'password' => Hash::make('password123'),
-            'role' => 'Viewer',
+            'role' => 'Employee',
         ]);
     }
 }
