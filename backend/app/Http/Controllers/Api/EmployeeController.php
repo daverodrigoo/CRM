@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 
 class EmployeeController extends Controller
 {
-    // Fetch all employees directly from the database
+    
     public function index()
     {
         return response()->json(User::all(), 200);

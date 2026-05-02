@@ -230,23 +230,25 @@ export default function Meeting() {
   };
 
   // 2. Handles the Deal Closed dropdown selection
+  // Handles all dropdown selections
   const handleDropdownChange = (id, field, value) => {
-    handleManualChange(id, field, value); // Update UI
-    savePipelineField(id, field, value);  // Send to database
-    setActiveDropdown(null);              // Close dropdown
+    let finalValue = value; // Default to passing the exact string ('Yes', 'No')
+
+    // ONLY convert to boolean if the field is specifically Responded
+    if (field === 'Responded') {
+      finalValue = value === 'Yes' ? true : (value === 'No' ? false : null);
+    }
+
+    handleManualChange(id, field, finalValue); // Update UI instantly
+    savePipelineField(id, field, finalValue);  // Send to database
+    setActiveDropdown(null);                   // Close dropdown
   };
 
   // 3. Sends the updated data straight to the Laravel Backend
   const savePipelineField = async (id, field, value) => {
     try {
-      // Laravel prefers true/false instead of "Yes"/"No" for booleans
-      let parsedValue = value;
-      if (field === 'Deal_Closed') {
-          parsedValue = value === 'Yes' ? true : (value === 'No' ? false : null);
-      }
-
       await axios.patch(`http://localhost:8000/api/assigned-leads/${id}/status`, {
-        [field]: parsedValue
+        [field]: value
       });
       console.log(`${field} saved successfully!`);
     } catch (error) {
@@ -356,8 +358,8 @@ export default function Meeting() {
                         <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Deal Closed</span>
                         <ChipSelect 
                           value={
-                            lead.Deal_Closed === true || lead.Deal_Closed === 'Yes' || lead.Deal_Closed === 1 ? 'Yes' : 
-                            (lead.Deal_Closed === false || lead.Deal_Closed === 'No' || lead.Deal_Closed === 0 || lead.Deal_Closed === '0' ? 'No' : '')
+                            lead.Deal_Closed === 'Yes' || lead.Deal_Closed === '1' || lead.Deal_Closed === 1 || lead.Deal_Closed === true ? 'Yes' : 
+                            (lead.Deal_Closed === 'No' || lead.Deal_Closed === '0' || lead.Deal_Closed === 0 || lead.Deal_Closed === false ? 'No' : null)
                           } 
                           options={OPTIONS.Deal_Closed} 
                           isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Deal_Closed`} 

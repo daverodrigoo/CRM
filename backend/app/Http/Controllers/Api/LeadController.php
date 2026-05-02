@@ -537,16 +537,14 @@ class LeadController extends Controller
                             $item['Meeting_Assigned_to'] = $fullName ?: ($user->name ?? 'Admin ' . $assignedLead->Meeting_Assigned_to);
                         }
                     }
-                    
+
                     // Live Status Logic (Now that the DB columns exist!)
-                    if ($assignedLead->Deal_Closed === true || $assignedLead->Deal_Closed === 'Yes' || $assignedLead->Deal_Closed === 1) {
+                    $dc = $assignedLead->Deal_Closed;
+                    
+                    if ($dc === 'Yes' || $dc === 'yes' || $dc === 1 || $dc === '1' || $dc === true) {
                         $item['Live_Status'] = 'Deal Closed';
-                    } elseif ($assignedLead->Deal_Closed === false || $assignedLead->Deal_Closed === 'No' || $assignedLead->Deal_Closed === 0 || $assignedLead->Deal_Closed === '0') {
+                    } elseif ($dc === 'No' || $dc === 'no' || $dc === 0 || $dc === '0' || $dc === false) {
                         $item['Live_Status'] = 'Deal Lost';
-                    } elseif ($assignedLead->Meeting_Completed) { 
-                        $item['Live_Status'] = 'Completed';
-                    } else {
-                        $item['Live_Status'] = 'Upcoming';
                     }
                     
                     return $item;
@@ -576,6 +574,52 @@ class LeadController extends Controller
         } catch (\Exception $e) {
             \Log::error("Failed to update meeting status: " . $e->getMessage());
             return response()->json(['error' => 'Failed to save: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // --- Fetch ALL Booked Meetings (For Super Admin) ---
+    public function getAllBookedMeetings()
+    {
+        try {
+            // Fetch ALL leads where a meeting was successfully booked (No user/batch filters)
+            $meetings = \App\Models\AssignedLead::with('masterLead.business')
+                ->where(function($query) {
+                    $query->where('Meeting_Booked', true)
+                          ->orWhere('Meeting_Booked', 1)
+                          ->orWhere('Meeting_Booked', 'Yes'); 
+                })
+                ->orderBy('Meeting_Date', 'desc')
+                ->get()
+                ->map(function ($assignedLead) {
+                    $item = $assignedLead->toArray();
+                    $item['Business_Name'] = $assignedLead->masterLead->business->Business_Name ?? 'Unknown Business';
+                    $item['business'] = $assignedLead->masterLead->business ?? null;
+                    
+                    // Convert Admin ID to Real Name
+                    if (!empty($assignedLead->Meeting_Assigned_to)) {
+                        $user = \App\Models\User::find($assignedLead->Meeting_Assigned_to);
+                        if ($user) {
+                            $fullName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+                            $item['Meeting_Assigned_to'] = $fullName ?: ($user->name ?? 'Admin ' . $assignedLead->Meeting_Assigned_to);
+                        }
+                    }
+                    
+                    // Live Status Logic
+                    $dc = $assignedLead->Deal_Closed;
+                    
+                    if ($dc === 'Yes' || $dc === 'yes' || $dc === 1 || $dc === '1' || $dc === true) {
+                        $item['Live_Status'] = 'Deal Closed';
+                    } elseif ($dc === 'No' || $dc === 'no' || $dc === 0 || $dc === '0' || $dc === false) {
+                        $item['Live_Status'] = 'Deal Lost';
+                    }
+                    
+                    return $item;
+                });
+
+            return response()->json($meetings, 200);
+        } catch (\Exception $e) {
+            \Log::error("All Booked Meetings Fetch Error: " . $e->getMessage()); 
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
     

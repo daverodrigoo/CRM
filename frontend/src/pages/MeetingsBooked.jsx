@@ -86,6 +86,10 @@ export default function MeetingsBooked() {
 
   const fetchMyBookedMeetings = async () => {
     const userId = localStorage.getItem('USER_ID');
+    // Grab the user role from local storage 
+    // (NOTE: If your system uses 'ROLE' or 'role' instead of 'USER_ROLE', change it here!)
+    const userRole = localStorage.getItem('USER_ROLE'); 
+    
     if (!userId) {
       setServerError("Please log in to view your booked meetings.");
       setIsLoading(false);
@@ -93,7 +97,15 @@ export default function MeetingsBooked() {
     }
 
     try {
-      const response = await axios.get(`http://localhost:8000/api/meetings/employee-booked/${userId}`);
+      // Default to the specific employee's meetings
+      let endpoint = `http://localhost:8000/api/meetings/employee-booked/${userId}`;
+      
+      // If the user is a Super Admin, flip the switch to get everything
+      if (userRole === 'Super Admin' || userRole === 'Super_Admin' || userRole === 'superadmin') {
+        endpoint = `http://localhost:8000/api/meetings/all-booked`;
+      }
+
+      const response = await axios.get(endpoint);
       setMeetings(response.data);
       setServerError(null);
     } catch (err) {
@@ -151,11 +163,13 @@ export default function MeetingsBooked() {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'Deal Closed': return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full">Deal Closed</span>;
-      case 'Deal Lost': return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase rounded-full">Deal Lost</span>;
-      case 'Completed': return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold uppercase rounded-full">Completed</span>;
-      case 'Upcoming': return <span className="px-2 py-1 bg-purple-100 text-[#7E3A99] text-xs font-bold uppercase rounded-full">Upcoming</span>;
-      default: return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold uppercase rounded-full">Unknown</span>;
+      case 'Deal Closed': 
+        return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full">Deal Closed</span>;
+      case 'Deal Lost': 
+        return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase rounded-full">Deal Lost</span>;
+      default: 
+        // If it's Upcoming, Completed, or unassigned, return absolutely nothing (blank)
+        return null; 
     }
   };
 

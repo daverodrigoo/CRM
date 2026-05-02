@@ -34,6 +34,7 @@ Route::put('/assigned-leads/{id}/book-meeting', [App\Http\Controllers\Api\LeadCo
 Route::get('/meetings/admin/{userId}', [App\Http\Controllers\Api\LeadController::class, 'getAdminMeetings']);
 Route::get('/meetings/employee-booked/{employeeId}', [App\Http\Controllers\Api\LeadController::class, 'getEmployeeBookedMeetings']);
 Route::patch('/assigned-leads/{id}/status', [App\Http\Controllers\Api\LeadController::class, 'updateMeetingStatus']);
+Route::get('/meetings/all-booked', [App\Http\Controllers\Api\LeadController::class, 'getAllBookedMeetings']);
 
 Route::put('/leads/{id}', [LeadController::class, 'update']);
 Route::put('/leads/{id}/pipeline', [LeadController::class, 'updatePipeline']);
