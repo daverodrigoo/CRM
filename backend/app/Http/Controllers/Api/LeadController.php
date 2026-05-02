@@ -501,48 +501,5 @@ class LeadController extends Controller
             return response()->json(['error' => 'Failed to fetch meetings: ' . $e->getMessage()], 500);
         }
     }
-
-    // --- Fetch Meetings Booked BY a Specific Employee ---
-    public function getEmployeeBookedMeetings($employeeId)
-    {
-        try {
-            // 1. Use 'admin_id' because the database column was created before we renamed the role to Employee
-            // Also standard Laravel uses 'id' instead of 'Batch_ID'
-            $batchIds = \App\Models\AssignmentBatch::where('admin_id', $employeeId)->pluck('id');
-
-            // 2. Fetch leads belonging to those batches (using 'assignment_batch_id' or 'batch_id' depending on your migration)
-            $meetings = \App\Models\AssignedLead::with('masterLead.business')
-                ->whereIn('assignment_batch_id', $batchIds) // Note: if your column is just 'batch_id', change this string
-                ->where(function($query) {
-                    $query->where('Meeting_Booked', true)
-                          ->orWhere('Meeting_Booked', 1)
-                          ->orWhere('Meeting_Booked', 'Yes'); 
-                })
-                ->orderBy('Meeting_Date', 'desc')
-                ->get()
-                ->map(function ($assignedLead) {
-                    $item = $assignedLead->toArray();
-                    $item['Business_Name'] = $assignedLead->masterLead->business->Business_Name ?? 'Unknown Business';
-                    
-                    // Live Status Logic based on Admin Actions
-                    if ($assignedLead->Deal_Closed === true || $assignedLead->Deal_Closed === 'Yes' || $assignedLead->Deal_Closed === 1) {
-                        $item['Display_Status'] = 'Deal Closed';
-                    } elseif ($assignedLead->Deal_Closed === false || $assignedLead->Deal_Closed === 'No' || $assignedLead->Deal_Closed === 0) {
-                        $item['Display_Status'] = 'Deal Lost';
-                    } elseif ($assignedLead->Completed) {
-                        $item['Display_Status'] = 'Meeting Completed';
-                    } else {
-                        $item['Display_Status'] = 'Upcoming';
-                    }
-                    
-                    return $item;
-                });
-
-            return response()->json($meetings, 200);
-        } catch (\Exception $e) {
-            \Log::error("Booked Meeting Fetch Error: " . $e->getMessage()); 
-            return response()->json(['error' => 'Failed to fetch meetings: ' . $e->getMessage()], 500);
-        }
-    }
     
 }
