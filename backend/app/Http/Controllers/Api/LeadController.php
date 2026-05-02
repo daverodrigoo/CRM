@@ -501,5 +501,82 @@ class LeadController extends Controller
             return response()->json(['error' => 'Failed to fetch meetings: ' . $e->getMessage()], 500);
         }
     }
+
+    // --- Fetch Meetings Booked BY a Specific Employee ---
+    public function getEmployeeBookedMeetings($employeeId)
+    {
+        try {
+            // THE FIX: We now know with 100% certainty the column is 'user_id'
+            $batchIds = \App\Models\AssignmentBatch::where('user_id', $employeeId)->pluck('Batch_ID')->toArray();
+
+            if (empty($batchIds)) {
+                return response()->json([], 200); // Return empty array safely if no batches found
+            }
+
+            // 2. Fetch leads tied to those batches where a meeting was successfully booked
+            $meetings = \App\Models\AssignedLead::with('masterLead.business')
+                ->whereIn('Batch_ID', $batchIds) 
+                ->where(function($query) {
+                    $query->where('Meeting_Booked', true)
+                          ->orWhere('Meeting_Booked', 1)
+                          ->orWhere('Meeting_Booked', 'Yes'); 
+                })
+                ->orderBy('Meeting_Date', 'desc')
+                ->get()
+                ->map(function ($assignedLead) {
+                    $item = $assignedLead->toArray();
+                    $item['Business_Name'] = $assignedLead->masterLead->business->Business_Name ?? 'Unknown Business';
+                    $item['business'] = $assignedLead->masterLead->business ?? null;
+                    
+
+                    if (!empty($assignedLead->Meeting_Assigned_to)) {
+                        $user = \App\Models\User::find($assignedLead->Meeting_Assigned_to);
+                        if ($user) {
+                            // Safely checks if your DB uses first_name/last_name, or just 'name'
+                            $fullName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+                            $item['Meeting_Assigned_to'] = $fullName ?: ($user->name ?? 'Admin ' . $assignedLead->Meeting_Assigned_to);
+                        }
+                    }
+                    
+                    // Live Status Logic (Now that the DB columns exist!)
+                    if ($assignedLead->Deal_Closed === true || $assignedLead->Deal_Closed === 'Yes' || $assignedLead->Deal_Closed === 1) {
+                        $item['Live_Status'] = 'Deal Closed';
+                    } elseif ($assignedLead->Deal_Closed === false || $assignedLead->Deal_Closed === 'No' || $assignedLead->Deal_Closed === 0 || $assignedLead->Deal_Closed === '0') {
+                        $item['Live_Status'] = 'Deal Lost';
+                    } elseif ($assignedLead->Meeting_Completed) { 
+                        $item['Live_Status'] = 'Completed';
+                    } else {
+                        $item['Live_Status'] = 'Upcoming';
+                    }
+                    
+                    return $item;
+                });
+
+            return response()->json($meetings, 200);
+        } catch (\Exception $e) {
+            \Log::error("Booked Meeting Fetch Error: " . $e->getMessage()); 
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // --- Update Live Meeting Status (Admin Notes, Completed, Deal Closed) ---
+    public function updateMeetingStatus(\Illuminate\Http\Request $request, $id)
+    {
+        try {
+            $assignedLead = \App\Models\AssignedLead::findOrFail($id);
+            
+            // Replaced 'Completed' with our new 'Meeting_Completed'
+            $assignedLead->update($request->only([
+                'Admin_Notes', 
+                'Meeting_Completed', 
+                'Deal_Closed'
+            ]));
+
+            return response()->json(['message' => 'Status updated successfully'], 200);
+        } catch (\Exception $e) {
+            \Log::error("Failed to update meeting status: " . $e->getMessage());
+            return response()->json(['error' => 'Failed to save: ' . $e->getMessage()], 500);
+        }
+    }
     
 }

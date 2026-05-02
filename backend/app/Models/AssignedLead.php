@@ -28,8 +28,9 @@ class AssignedLead extends Model
         'Meeting_Held',
         'Service_Offered',
         'Remarks',
-        'Deal_Closed',
-        'Deal_Value',
+        'Admin_Notes',
+        'Meeting_Completed',
+        'Deal_Closed'
     ];
 
     public function batch()

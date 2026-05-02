@@ -220,9 +220,40 @@ export default function Meeting() {
   };
 
   const toggleDropdown = (id) => setActiveDropdown(activeDropdown === id ? null : id);
-  const handleDropdownChange = () => {};
-  const handleManualChange = () => {};
-  const savePipelineField = () => {};
+  // 1. Updates the text/checkbox on your screen instantly
+  const handleManualChange = (id, field, value) => {
+    setMeetings(prevMeetings =>
+      prevMeetings.map(meeting =>
+        meeting.Assigned_Lead_ID === id ? { ...meeting, [field]: value } : meeting
+      )
+    );
+  };
+
+  // 2. Handles the Deal Closed dropdown selection
+  const handleDropdownChange = (id, field, value) => {
+    handleManualChange(id, field, value); // Update UI
+    savePipelineField(id, field, value);  // Send to database
+    setActiveDropdown(null);              // Close dropdown
+  };
+
+  // 3. Sends the updated data straight to the Laravel Backend
+  const savePipelineField = async (id, field, value) => {
+    try {
+      // Laravel prefers true/false instead of "Yes"/"No" for booleans
+      let parsedValue = value;
+      if (field === 'Deal_Closed') {
+          parsedValue = value === 'Yes' ? true : (value === 'No' ? false : null);
+      }
+
+      await axios.patch(`http://localhost:8000/api/assigned-leads/${id}/status`, {
+        [field]: parsedValue
+      });
+      console.log(`${field} saved successfully!`);
+    } catch (error) {
+      console.error("Error saving field:", error);
+      alert(`Failed to save ${field}. Check console for errors.`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -310,11 +341,11 @@ export default function Meeting() {
                         <div className="flex items-center justify-center">
                           <input
                             type="checkbox"
-                            checked={lead.Completed || false}
+                            checked={lead.Meeting_Completed || false}
                             onChange={(e) => {
                               const isChecked = e.target.checked;
-                              handleManualChange(lead.Assigned_Lead_ID, 'Completed', isChecked);
-                              savePipelineField(lead.Assigned_Lead_ID, 'Completed', isChecked);
+                              handleManualChange(lead.Assigned_Lead_ID, 'Meeting_Completed', isChecked);
+                              savePipelineField(lead.Assigned_Lead_ID, 'Meeting_Completed', isChecked);
                             }}
                             className="w-5 h-5 cursor-pointer accent-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
                           />
@@ -324,7 +355,10 @@ export default function Meeting() {
                       <td className="px-3 py-3 text-center">
                         <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Deal Closed</span>
                         <ChipSelect 
-                          value={lead.Deal_Closed === true ? 'Yes' : (lead.Deal_Closed === false ? 'No' : null)} 
+                          value={
+                            lead.Deal_Closed === true || lead.Deal_Closed === 'Yes' || lead.Deal_Closed === 1 ? 'Yes' : 
+                            (lead.Deal_Closed === false || lead.Deal_Closed === 'No' || lead.Deal_Closed === 0 || lead.Deal_Closed === '0' ? 'No' : '')
+                          } 
                           options={OPTIONS.Deal_Closed} 
                           isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Deal_Closed`} 
                           onToggle={() => toggleDropdown(`${lead.Assigned_Lead_ID}-Deal_Closed`)} 
