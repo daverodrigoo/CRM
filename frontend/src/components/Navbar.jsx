@@ -23,7 +23,29 @@ export default function Navbar() {
   const userRole = localStorage.getItem('USER_ROLE') || getStoredRole();
 
   const getNavItems = () => {
-    if (userRole === 'Super Admin' || userRole === 'Admin') {
+    if (userRole === 'Super Admin') {
+      return [
+        { name: 'Dashboard', path: '/dashboard' },
+        { name: 'Leads', path: '/leads' },
+        { 
+          name: 'Meeting', 
+          path: '/meeting',
+          dropdown: [
+            { name: 'Meeting', path: '/meeting' },
+            { name: 'Meetings Booked', path: '/meetings-booked'  }
+          ]
+        },
+        { 
+          name: 'Employees', 
+          path: '/employees',
+          dropdown: [
+            { name: 'Management', path: '/employees' },
+            { name: 'Assigned Leads', path: '/assigned-leads' }
+          ]
+        }
+      ];
+    } 
+    else if (userRole === 'Admin') {
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Leads', path: '/leads' },
@@ -42,7 +64,8 @@ export default function Navbar() {
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Leads', path: '/leads' },
-        { name: 'Assigned Leads', path: '/employee-assigned-leads' }
+        { name: 'Assigned Leads', path: '/employee-assigned-leads' },
+        { name: 'Meetings Booked', path: '/meetings-booked' }
       ];
     } else {
       // Viewer Role Navbar Configuration

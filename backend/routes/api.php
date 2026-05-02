@@ -32,6 +32,7 @@ Route::post('/leads/assign', [LeadController::class, 'assignLeads']);
 Route::get('/leads/assigned/{userId}', [LeadController::class, 'getAssignedLeads']);
 Route::put('/assigned-leads/{id}/book-meeting', [App\Http\Controllers\Api\LeadController::class, 'bookMeeting']);
 Route::get('/meetings/admin/{userId}', [App\Http\Controllers\Api\LeadController::class, 'getAdminMeetings']);
+Route::get('/meetings/employee-booked/{employeeId}', [App\Http\Controllers\Api\LeadController::class, 'getEmployeeBookedMeetings']);
 
 Route::put('/leads/{id}', [LeadController::class, 'update']);
 Route::put('/leads/{id}/pipeline', [LeadController::class, 'updatePipeline']);
