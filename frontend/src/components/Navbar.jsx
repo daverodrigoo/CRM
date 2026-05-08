@@ -26,7 +26,14 @@ export default function Navbar() {
     if (userRole === 'Super Admin') {
       return [
         { name: 'Dashboard', path: '/dashboard' },
-        { name: 'Leads', path: '/leads' },
+        { 
+          name: 'Leads', 
+          path: '/leads',
+          dropdown: [
+            { name: 'Leads', path: '/leads' },
+            { name: 'Assigned Leads', path: '/employee-assigned-leads'}
+          ]
+        },
         { 
           name: 'Meeting', 
           path: '/meeting',
