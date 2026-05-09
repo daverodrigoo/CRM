@@ -161,16 +161,21 @@ export default function MeetingsBooked() {
     setModalTab('details');
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Deal Closed': 
-        return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full">Deal Closed</span>;
-      case 'Deal Lost': 
-        return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase rounded-full">Deal Lost</span>;
-      default: 
-        // If it's Upcoming, Completed, or unassigned, return absolutely nothing (blank)
-        return null; 
+  const getStatusBadge = (dealClosed) => {
+    // 1. If 'Yes' -> Deal Closed
+    if (dealClosed === 'Yes' || dealClosed === '1' || dealClosed === 1 || dealClosed === true) {
+      return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full">Deal Closed</span>;
     }
+    // 2. If 'No' -> Deal Lost
+    if (dealClosed === 'No' || dealClosed === '0' || dealClosed === 0 || dealClosed === false) {
+      return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase rounded-full">Deal Lost</span>;
+    }
+    // 3. If 'Meeting' -> Meeting
+    if (dealClosed === 'Meeting') {
+      return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold uppercase rounded-full">Meeting</span>;
+    }
+    // If it's blank/unassigned, return nothing
+    return null; 
   };
 
   return (
@@ -228,7 +233,7 @@ export default function MeetingsBooked() {
                       <td className="px-6 py-4 text-center text-gray-700">{meeting.Meeting_Time || '-'}</td>
                       <td className="px-6 py-4 text-center text-gray-700 capitalize">{meeting.Meeting_Type || '-'}</td>
                       <td className="px-6 py-4 text-center text-gray-700">{meeting.Service_Offered || '-'}</td>
-                      <td className="px-6 py-4 text-center">{getStatusBadge(meeting.Live_Status)}</td>
+                      <td className="px-6 py-4 text-center">{getStatusBadge(meeting.Deal_Closed)}</td>
                     </tr>
                   ))
                 )}

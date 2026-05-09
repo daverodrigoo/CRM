@@ -13,14 +13,15 @@ const emptyForm = {
 };
 
 const OPTIONS = {
-  Deal_Closed: ['Yes', 'No']
+  Deal_Closed: ['Yes', 'No', 'Meeting']
 };
 
 const getChipColor = (value) => {
   const safeVal = value ? String(value).trim() : '';
   switch (safeVal) {
     case 'Yes': return 'bg-green-100 text-green-700 hover:bg-green-200'; 
-    case 'No': return 'bg-red-100 text-red-700 hover:bg-red-200'; 
+    case 'No': return 'bg-red-100 text-red-700 hover:bg-red-200';
+    case 'Meeting': return 'bg-blue-100 text-blue-700 hover:bg-blue-200'; 
     case '': return 'bg-white text-gray-400 border border-gray-200 hover:bg-gray-50';
     default: return 'bg-gray-100 text-gray-600 hover:bg-gray-200';
   }
@@ -359,7 +360,8 @@ export default function Meeting() {
                         <ChipSelect 
                           value={
                             lead.Deal_Closed === 'Yes' || lead.Deal_Closed === '1' || lead.Deal_Closed === 1 || lead.Deal_Closed === true ? 'Yes' : 
-                            (lead.Deal_Closed === 'No' || lead.Deal_Closed === '0' || lead.Deal_Closed === 0 || lead.Deal_Closed === false ? 'No' : null)
+                            (lead.Deal_Closed === 'No' || lead.Deal_Closed === '0' || lead.Deal_Closed === 0 || lead.Deal_Closed === false ? 'No' :
+                            (lead.Deal_Closed === 'Meeting' ? 'Meeting' : null))  
                           } 
                           options={OPTIONS.Deal_Closed} 
                           isOpen={activeDropdown === `${lead.Assigned_Lead_ID}-Deal_Closed`} 
