@@ -869,6 +869,7 @@ const handleBookSubmit = async () => {
                   <option value="" disabled>Select Type</option>
                   <option value="Online">Online</option>
                   <option value="Face-to-Face">Face-to-Face</option>
+                  <option value="Send Proposal">Send Proposal</option>
                 </select>
               </div>
 
