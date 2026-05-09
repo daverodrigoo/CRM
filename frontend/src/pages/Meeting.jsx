@@ -263,7 +263,7 @@ export default function Meeting() {
       
       <main className="pt-28 px-8 pb-12 max-w-[98%] mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Meetings</h1>
+          <h1 className="text-2xl font-bold text-gray-800">My Meetings</h1>
         </div>
 
         {/* --- MAIN TABLE --- */}

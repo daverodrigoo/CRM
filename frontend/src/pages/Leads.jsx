@@ -224,13 +224,34 @@ useEffect(() => {
     setFormData({ ...formData, Social_Media: newSocialMedia });
   };
 
-  const validateForm = () => {
-    if (!formData.Business_Name || String(formData.Business_Name).trim() === '' || !formData.Industry || String(formData.Industry).trim() === '') {
-      setErrorMsg('Please fill out all required fields marked with an asterisk (*).');
-      return false;
+  const validateLeadObj = (lead) => {
+    // 1. Core required fields
+    if (!lead.Business_Name || String(lead.Business_Name).trim() === '' || 
+        !lead.Industry || String(lead.Industry).trim() === '') {
+      return { isValid: false, msg: 'Business Name and Industry are required.' };
     }
-    setErrorMsg('');
-    return true;
+
+    // 2. Cascading Contact Information Check
+    const hasBusinessContact = lead.Business_Phone && String(lead.Business_Phone).trim() !== '' && lead.Business_Email && String(lead.Business_Email).trim() !== '';
+    const hasOwnerContact = lead.Business_Owner_Phone && String(lead.Business_Owner_Phone).trim() !== '' && lead.Business_Owner_Email && String(lead.Business_Owner_Email).trim() !== '';
+    const hasPersonContact = lead.Contact_Person_Phone && String(lead.Contact_Person_Phone).trim() !== '' && lead.Contact_Person_Email && String(lead.Contact_Person_Email).trim() !== '';
+
+    // If all three pairs are incomplete, it fails validation
+    if (!hasBusinessContact && !hasOwnerContact && !hasPersonContact) {
+      return { 
+        isValid: false, 
+        msg: 'You must provide a complete Phone and Email pair for either the Business, the Business Owner, or the Contact Person.' 
+      };
+    }
+
+    return { isValid: true, msg: '' };
+  };
+
+  // The Add/Edit form will call this version
+  const validateForm = () => {
+    const { isValid, msg } = validateLeadObj(formData);
+    setErrorMsg(isValid ? '' : msg);
+    return isValid;
   };
 
   const handleSaveNew = async (e) => {

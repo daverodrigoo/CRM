@@ -38,7 +38,7 @@ export default function Navbar() {
           name: 'Meeting', 
           path: '/meeting',
           dropdown: [
-            { name: 'Meeting', path: '/meeting' },
+            { name: 'My Meetings', path: '/meeting' },
             { name: 'Meetings Booked', path: '/meetings-booked'  }
           ]
         },
@@ -56,7 +56,7 @@ export default function Navbar() {
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Leads', path: '/leads' },
-        { name: 'Meeting', path: '/meeting' },
+        { name: 'My Meetings', path: '/meeting' },
         { 
           name: 'Employees', 
           path: '/employees',
