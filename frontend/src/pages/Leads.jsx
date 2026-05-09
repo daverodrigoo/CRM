@@ -156,11 +156,17 @@ useEffect(() => {
   const fetchAdmins = async () => {
     try {
       const response = await axios.get('http://localhost:8000/api/employees');
-      // FIX: Now filtering for 'employee' instead of 'admin'
-      const employeeUsers = response.data.filter(emp => (emp.role || '').toLowerCase() === 'employee');
-      setAdmins(employeeUsers);
+      
+      // FIX: Now filtering for both 'employee' AND 'super admin' roles
+      const eligibleUsers = response.data.filter(user => {
+        const role = (user.role || '').toLowerCase();
+        return role === 'employee' || role === 'super admin';
+      });
+      
+      // Update the dropdown list with both roles
+      setAdmins(eligibleUsers);
     } catch (error) {
-      console.error("Error fetching employees:", error);
+      console.error("Error fetching users:", error);
     }
   };
 
@@ -349,6 +355,22 @@ const confirmAssign = async () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
+  // --- UPDATED DOWNLOAD FUNCTION ---
+  const handleDownloadTemplate = () => {
+    // This points to the file sitting in your frontend/public folder
+    const fileUrl = '/Leads Template.xlsx'; 
+    
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    
+    // The name the file will have when downloaded
+    link.setAttribute('download', 'Leads Template.xlsx'); 
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // RESTORED: Full File Upload Logic
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -526,6 +548,17 @@ const confirmAssign = async () => {
             />
             <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
             <button onClick={handleImportClick} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md font-medium transition-colors shadow-sm text-sm">Import</button>
+            <button 
+              onClick={handleDownloadTemplate} 
+              title="Download Template" 
+              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 p-2 rounded-md transition-colors shadow-sm flex items-center justify-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
             <button onClick={() => { setFormData({ ...emptyForm, Date_Added: getTodayDate() }); setIsAddOpen(true); setErrorMsg(''); }} className="bg-[#7E3A99] hover:bg-[#19a828] text-white px-5 py-2 rounded-md font-medium transition-colors shadow-sm text-sm">+ Add Lead</button>
           </div>
         </div>
