@@ -462,7 +462,7 @@ class LeadController extends Controller
                 'Meeting_Assigned_to' => $request->Meeting_Assigned_to,
                 'Service_Offered' => $request->Service_Offered,
                 'Meeting_Notes' => $request->Meeting_Notes,
-                'Meeting_Booked' => true, // Auto-mark as booked!
+                //'Meeting_Booked' => true, // Auto-mark as booked
             ]);
 
             return response()->json(['message' => 'Meeting successfully booked and transferred to Admin!'], 200);
@@ -478,12 +478,7 @@ class LeadController extends Controller
             // FIX: Use 'masterLead.business' to match your AssignedLead.php model
             $meetings = AssignedLead::with('masterLead.business')
                 ->where('Meeting_Assigned_to', $userId)
-                ->where(function($query) {
-                    // This ensures it grabs it whether your DB stores it as a boolean (1) or string ('Yes')
-                    $query->where('Meeting_Booked', true)
-                          ->orWhere('Meeting_Booked', 1)
-                          ->orWhere('Meeting_Booked', 'Yes'); 
-                })
+                ->whereNotNull('Meeting_Date')
                 ->orderBy('Meeting_Date', 'asc')
                 ->orderBy('Meeting_Time', 'asc')
                 ->get()
@@ -516,11 +511,7 @@ class LeadController extends Controller
             // 2. Fetch leads tied to those batches where a meeting was successfully booked
             $meetings = \App\Models\AssignedLead::with('masterLead.business')
                 ->whereIn('Batch_ID', $batchIds) 
-                ->where(function($query) {
-                    $query->where('Meeting_Booked', true)
-                          ->orWhere('Meeting_Booked', 1)
-                          ->orWhere('Meeting_Booked', 'Yes'); 
-                })
+                ->whereNotNull('Meeting_Date')
                 ->orderBy('Meeting_Date', 'desc')
                 ->get()
                 ->map(function ($assignedLead) {
@@ -583,11 +574,7 @@ class LeadController extends Controller
         try {
             // Fetch ALL leads where a meeting was successfully booked (No user/batch filters)
             $meetings = \App\Models\AssignedLead::with('masterLead.business')
-                ->where(function($query) {
-                    $query->where('Meeting_Booked', true)
-                          ->orWhere('Meeting_Booked', 1)
-                          ->orWhere('Meeting_Booked', 'Yes'); 
-                })
+                ->whereNotNull('Meeting_Date')
                 ->orderBy('Meeting_Date', 'desc')
                 ->get()
                 ->map(function ($assignedLead) {
