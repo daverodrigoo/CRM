@@ -450,6 +450,7 @@ class LeadController extends Controller
             'Meeting_Assigned_to' => 'required|exists:users,id',
             'Service_Offered' => 'required|string',
             'Meeting_Notes' => 'nullable|string',
+            'Assigned_By' => 'required|exists:users,id'
         ]);
 
         try {
@@ -462,6 +463,7 @@ class LeadController extends Controller
                 'Meeting_Assigned_to' => $request->Meeting_Assigned_to,
                 'Service_Offered' => $request->Service_Offered,
                 'Meeting_Notes' => $request->Meeting_Notes,
+                'Assigned_By' => $request->Assigned_By
                 //'Meeting_Booked' => true, // Auto-mark as booked
             ]);
 
@@ -486,6 +488,12 @@ class LeadController extends Controller
                     $item = $assignedLead->toArray();
                     // Pull the business name out and attach it directly so the frontend can read it perfectly
                     $item['Business_Name'] = $assignedLead->masterLead->business->Business_Name ?? 'Unknown Business';
+                    if (!empty($assignedLead->Assigned_By)) {
+                        $assigner = \App\Models\User::find($assignedLead->Assigned_By);
+                        $item['Assigned_By_Name'] = $assigner ? trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? '')) : 'Unknown';
+                    } else {
+                        $item['Assigned_By_Name'] = '-';
+                    }
                     return $item;
                 });
 
@@ -537,7 +545,12 @@ class LeadController extends Controller
                     } elseif ($dc === 'No' || $dc === 'no' || $dc === 0 || $dc === '0' || $dc === false) {
                         $item['Live_Status'] = 'Deal Lost';
                     }
-                    
+                    if (!empty($assignedLead->Assigned_By)) {
+                        $assigner = \App\Models\User::find($assignedLead->Assigned_By);
+                        $item['Assigned_By_Name'] = $assigner ? trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? '')) : 'Unknown';
+                    } else {
+                        $item['Assigned_By_Name'] = '-';
+                    }
                     return $item;
                 });
 
@@ -599,7 +612,12 @@ class LeadController extends Controller
                     } elseif ($dc === 'No' || $dc === 'no' || $dc === 0 || $dc === '0' || $dc === false) {
                         $item['Live_Status'] = 'Deal Lost';
                     }
-                    
+                    if (!empty($assignedLead->Assigned_By)) {
+                        $assigner = \App\Models\User::find($assignedLead->Assigned_By);
+                        $item['Assigned_By_Name'] = $assigner ? trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? '')) : 'Unknown';
+                    } else {
+                        $item['Assigned_By_Name'] = '-';
+                    }
                     return $item;
                 });
 

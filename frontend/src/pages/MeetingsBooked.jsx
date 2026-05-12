@@ -184,7 +184,7 @@ export default function MeetingsBooked() {
       
       <main className="pt-28 px-8 pb-12 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">My Booked Meetings</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Booked Meetings</h1>
           <p className="text-gray-500 text-sm mt-1">Track the status of meetings you have successfully scheduled.</p>
         </div>
 
@@ -194,6 +194,7 @@ export default function MeetingsBooked() {
               <thead className="bg-[#7E3A99] text-white">
                 <tr>
                   <th className="px-6 py-4 font-semibold whitespace-nowrap">Business Name</th>
+                  <th className="px-6 py-4 font-semibold whitespace-nowrap text-center">Assigned By</th>
                   <th className="px-6 py-4 font-semibold whitespace-nowrap text-center">Assigned To</th>
                   <th className="px-6 py-4 font-semibold whitespace-nowrap text-center">Meeting Date</th>
                   <th className="px-6 py-4 font-semibold whitespace-nowrap text-center">Meeting Time</th>
@@ -205,10 +206,10 @@ export default function MeetingsBooked() {
               
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
-                  <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-500">Loading your scheduled meetings...</td></tr>
+                  <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-500">Loading your scheduled meetings...</td></tr>
                 ) : serverError ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
+                    <td colSpan="7" className="px-6 py-12 text-center">
                       <p className="text-red-600 font-bold text-lg mb-2">Backend Error Detected:</p>
                       <code className="bg-red-50 text-red-500 px-4 py-3 rounded-md block mx-auto max-w-3xl border border-red-200 text-sm">
                         {serverError}
@@ -216,7 +217,7 @@ export default function MeetingsBooked() {
                     </td>
                   </tr>
                 ) : meetings.length === 0 ? (
-                  <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-500">No meetings booked yet.</td></tr>
+                  <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-500">No meetings booked yet.</td></tr>
                 ) : (
                   meetings.map((meeting, index) => (
                     <tr key={index} className="hover:bg-purple-50 transition-colors">
@@ -228,6 +229,7 @@ export default function MeetingsBooked() {
                           {meeting.Business_Name}
                         </button>
                       </td>
+                      <td className="px-6 py-4 text-center text-gray-700 capitalize font-medium">{meeting.Assigned_By_Name || '-'}</td>
                       <td className="px-6 py-4 text-center text-gray-700 capitalize font-medium">{meeting.Meeting_Assigned_to || '-'}</td>
                       <td className="px-6 py-4 text-center text-gray-700">{meeting.Meeting_Date ? new Date(meeting.Meeting_Date).toLocaleDateString() : '-'}</td>
                       <td className="px-6 py-4 text-center text-gray-700">{meeting.Meeting_Time || '-'}</td>
