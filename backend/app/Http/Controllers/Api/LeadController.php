@@ -489,8 +489,14 @@ class LeadController extends Controller
                     // Pull the business name out and attach it directly so the frontend can read it perfectly
                     $item['Business_Name'] = $assignedLead->masterLead->business->Business_Name ?? 'Unknown Business';
                     if (!empty($assignedLead->Assigned_By)) {
-                        $assigner = \App\Models\User::find($assignedLead->Assigned_By);
-                        $item['Assigned_By_Name'] = $assigner ? trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? '')) : 'Unknown';
+                    $assigner = \App\Models\User::find($assignedLead->Assigned_By);
+                    if ($assigner) {
+                        $fullName = trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? ''));
+                        // THE FIX: Fallback to the standard 'name' column if first/last are empty!
+                        $item['Assigned_By_Name'] = $fullName ?: ($assigner->name ?? 'User ' . $assignedLead->Assigned_By);
+                    } else {
+                        $item['Assigned_By_Name'] = 'Unknown User';
+                    }
                     } else {
                         $item['Assigned_By_Name'] = '-';
                     }
@@ -546,8 +552,14 @@ class LeadController extends Controller
                         $item['Live_Status'] = 'Deal Lost';
                     }
                     if (!empty($assignedLead->Assigned_By)) {
-                        $assigner = \App\Models\User::find($assignedLead->Assigned_By);
-                        $item['Assigned_By_Name'] = $assigner ? trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? '')) : 'Unknown';
+                    $assigner = \App\Models\User::find($assignedLead->Assigned_By);
+                    if ($assigner) {
+                        $fullName = trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? ''));
+                        // THE FIX: Fallback to the standard 'name' column if first/last are empty!
+                        $item['Assigned_By_Name'] = $fullName ?: ($assigner->name ?? 'User ' . $assignedLead->Assigned_By);
+                    } else {
+                        $item['Assigned_By_Name'] = 'Unknown User';
+                    }
                     } else {
                         $item['Assigned_By_Name'] = '-';
                     }
@@ -613,8 +625,14 @@ class LeadController extends Controller
                         $item['Live_Status'] = 'Deal Lost';
                     }
                     if (!empty($assignedLead->Assigned_By)) {
-                        $assigner = \App\Models\User::find($assignedLead->Assigned_By);
-                        $item['Assigned_By_Name'] = $assigner ? trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? '')) : 'Unknown';
+                    $assigner = \App\Models\User::find($assignedLead->Assigned_By);
+                    if ($assigner) {
+                        $fullName = trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? ''));
+                        // THE FIX: Fallback to the standard 'name' column if first/last are empty!
+                        $item['Assigned_By_Name'] = $fullName ?: ($assigner->name ?? 'User ' . $assignedLead->Assigned_By);
+                    } else {
+                        $item['Assigned_By_Name'] = 'Unknown User';
+                    }
                     } else {
                         $item['Assigned_By_Name'] = '-';
                     }

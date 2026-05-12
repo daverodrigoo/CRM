@@ -249,12 +249,16 @@ export default function Meeting() {
   const savePipelineField = async (id, field, value) => {
     try {
       await axios.patch(`http://localhost:8000/api/assigned-leads/${id}/status`, {
-        [field]: value
+        // This satisfies updateMeetingStatus()
+        [field]: value, 
+        // This satisfies updateAssignedLeadPipeline()
+        field: field,   
+        value: value    
       });
       console.log(`${field} saved successfully!`);
     } catch (error) {
       console.error("Error saving field:", error);
-      alert(`Failed to save ${field}. Check console for errors.`);
+      alert(`Failed to save ${field}.`);
     }
   };
 

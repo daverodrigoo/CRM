@@ -161,28 +161,43 @@ export default function MeetingsBooked() {
     setModalTab('details');
   };
 
-  const getStatusBadge = (dealClosed) => {
-    // 1. If 'Yes' -> Deal Closed
-    if (dealClosed === 'Yes' || dealClosed === '1' || dealClosed === 1 || dealClosed === true) {
+  const getStatusBadge = (meeting) => {
+    if (!meeting || typeof meeting !== 'object') return null;
+
+    // 1. Check if complete (Tolerates boolean true, integer 1, or string "1")
+    const isComplete = 
+      meeting.Meeting_Completed === true || 
+      meeting.Meeting_Completed === 1 || 
+      meeting.Meeting_Completed === '1' || 
+      meeting.Meeting_Completed === 'true';
+
+    // If the box is unchecked in the database, it stays pending
+    if (!isComplete) {
+      return <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase rounded-full">Incomplete</span>; 
+    }
+
+    // 2. If it IS complete, what is the deal outcome?
+    const dealClosed = String(meeting.Deal_Closed).toLowerCase().trim();
+
+    if (dealClosed === 'yes' || dealClosed === '1' || dealClosed === 'true') {
       return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full">Deal Closed</span>;
     }
-    // 2. If 'No' -> Deal Lost
-    if (dealClosed === 'No' || dealClosed === '0' || dealClosed === 0 || dealClosed === false) {
+    if (dealClosed === 'no' || dealClosed === '0' || dealClosed === 'false') {
       return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase rounded-full">Deal Lost</span>;
     }
-    // 3. If 'Meeting' -> Meeting
-    if (dealClosed === 'Meeting') {
+    if (dealClosed === 'meeting') {
       return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold uppercase rounded-full">Meeting</span>;
     }
-    // If it's blank/unassigned, return nothing
-    return null; 
+
+    // Fallback if checked complete, but the user hasn't selected a Deal status yet
+    return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold uppercase rounded-full">Pending</span>;
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <main className="pt-28 px-8 pb-12 max-w-7xl mx-auto">
+      <main className="pt-28 px-8 pb-12 max-w-[80%] mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Booked Meetings</h1>
           <p className="text-gray-500 text-sm mt-1">Track the status of meetings you have successfully scheduled.</p>
@@ -235,7 +250,7 @@ export default function MeetingsBooked() {
                       <td className="px-6 py-4 text-center text-gray-700">{meeting.Meeting_Time || '-'}</td>
                       <td className="px-6 py-4 text-center text-gray-700 capitalize">{meeting.Meeting_Type || '-'}</td>
                       <td className="px-6 py-4 text-center text-gray-700">{meeting.Service_Offered || '-'}</td>
-                      <td className="px-6 py-4 text-center">{getStatusBadge(meeting.Deal_Closed)}</td>
+                      <td className="px-6 py-4 text-center">{getStatusBadge(meeting)}</td>
                     </tr>
                   ))
                 )}

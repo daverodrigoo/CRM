@@ -468,6 +468,8 @@ const fetchAdmins = async () => {
 
 const handleBookSubmit = async () => {
     // Validation
+
+    const currentUserId = localStorage.getItem('USER_ID');
     if (!scheduleForm.Meeting_Date || !scheduleForm.Meeting_Time || !scheduleForm.Meeting_Type || !scheduleForm.Meeting_Assigned_to || !scheduleForm.Service_Offered.trim()) {
       setScheduleError("Meeting Date, Meeting Time, Meeting Type, Assigned To, and Service Offered are all required to proceed.");
       return;
@@ -475,7 +477,7 @@ const handleBookSubmit = async () => {
     
     try {
 
-      const currentUserId = localStorage.getItem('USER_ID');
+      
       // 1. Send the data to the backend to save and assign to the Admin
       await axios.put(`http://localhost:8000/api/assigned-leads/${scheduleLead.Assigned_Lead_ID}/book-meeting`, {
         Meeting_Date: scheduleForm.Meeting_Date,
