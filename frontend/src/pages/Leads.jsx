@@ -251,6 +251,29 @@ useEffect(() => {
       return { isValid: false, msg: 'Business Name and Industry are required.' };
     }
 
+    // --- Helper Validation Functions ---
+    // Checks if email has a standard format (string@string.string)
+    const isValidEmail = (email) => {
+      if (!email || String(email).trim() === '') return true; // Ignore if empty
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+    };
+
+    // Checks if phone has valid characters (numbers, spaces, + - ( ) ) and is a reasonable length
+    const isValidPhone = (phone) => {
+      if (!phone || String(phone).trim() === '') return true; // Ignore if empty
+      return /^[\d\s\+\-\(\)]{7,20}$/.test(String(phone).trim());
+    };
+
+    // 2. Format Validation (Ensures that IF a user typed something, it's valid)
+    if (!isValidPhone(lead.Business_Phone)) return { isValid: false, msg: 'Invalid Business Phone format. Use only numbers, spaces, and + - ( )' };
+    if (!isValidEmail(lead.Business_Email)) return { isValid: false, msg: 'Invalid Business Email format.' };
+
+    if (!isValidPhone(lead.Business_Owner_Phone)) return { isValid: false, msg: 'Invalid Business Owner Phone format. Use only numbers, spaces, and + - ( )' };
+    if (!isValidEmail(lead.Business_Owner_Email)) return { isValid: false, msg: 'Invalid Business Owner Email format.' };
+
+    if (!isValidPhone(lead.Contact_Person_Phone)) return { isValid: false, msg: 'Invalid Contact Person Phone format. Use only numbers, spaces, and + - ( )' };
+    if (!isValidEmail(lead.Contact_Person_Email)) return { isValid: false, msg: 'Invalid Contact Person Email format.' };
+
     // 2. Cascading Contact Information Check
     const hasBusinessContact = lead.Business_Phone && String(lead.Business_Phone).trim() !== '' && lead.Business_Email && String(lead.Business_Email).trim() !== '';
     const hasOwnerContact = lead.Business_Owner_Phone && String(lead.Business_Owner_Phone).trim() !== '' && lead.Business_Owner_Email && String(lead.Business_Owner_Email).trim() !== '';
