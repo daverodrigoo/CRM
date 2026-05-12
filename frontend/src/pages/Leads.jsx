@@ -47,7 +47,27 @@ const LeadForm = ({ formData, handleInputChange, handleSocialMediaChange, addSoc
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Name <span className="text-red-500">*</span></label><input type="text" name="Business_Name" value={formData.Business_Name} onChange={handleInputChange} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Industry <span className="text-red-500">*</span></label><input type="text" name="Industry" value={formData.Industry} onChange={handleInputChange} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
+        <div className="space-y-1">
+        <label className="text-xs font-semibold text-gray-500">Industry <span className="text-red-500">*</span></label>
+        <select 
+          name="Industry" 
+          value={formData.Industry} 
+          onChange={handleInputChange} 
+          disabled={isReadonly} 
+          className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white"
+        >
+          <option value="">Select an industry...</option>
+          <option value="Business">Business</option>
+          <option value="Distribution">Distribution</option>
+          <option value="Finance">Finance</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Retail">Retail</option>
+          <option value="Selling">Selling</option>
+          <option value="Telecommunications">Telecommunications</option>
+          <option value="Trading">Trading</option>
+          <option value="Others">Others</option>
+        </select>
+      </div>
         <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Date Added</label><input type="date" name="Date_Added" value={formData.Date_Added} onChange={handleInputChange} disabled={true} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
       </div>
 
