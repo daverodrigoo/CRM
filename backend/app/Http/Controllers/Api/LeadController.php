@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\AssignmentBatch;
 use App\Models\AssignedLead;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\LeadAssignedMail;
+use App\Mail\MeetingBookedMail;
+use App\Models\User;
 
 class LeadController extends Controller
 {
@@ -203,6 +207,17 @@ class LeadController extends Controller
                     'Responded' => null,      // Explicitly set to null
                     'Meeting_Booked' => null, // Explicitly set to null
                 ]);
+            }
+
+            // --- NEW: Trigger Email Notification ---
+            $employee = User::find($validated['employee_id']);
+            if ($employee) {
+                try {
+                    $emailAddress = $employee->Email ?? $employee->email;
+                    Mail::to($emailAddress)->send(new LeadAssignedMail($employee, $batch->Batch_Name, count($validated['lead_ids'])));
+                } catch (\Exception $e) {
+                    \Log::error('Lead Assignment Mail failed: ' . $e->getMessage());
+                }
             }
 
             return response()->json([
@@ -466,6 +481,24 @@ class LeadController extends Controller
                 'Assigned_By' => $request->Assigned_By
                 //'Meeting_Booked' => true, // Auto-mark as booked
             ]);
+
+            // --- NEW: Trigger Email Notification ---
+            $admin = User::find($request->Meeting_Assigned_to);
+            $assigner = User::find($request->Assigned_By);
+            
+            if ($admin) {
+                try {
+                    // Load the nested business data so the email can read the Business Name
+                    $assignedLead->load('masterLead.business'); 
+                    
+                    $assignerName = $assigner ? trim(($assigner->first_name ?? '') . ' ' . ($assigner->last_name ?? '')) ?: $assigner->name : 'An Employee';
+                    $emailAddress = $admin->Email ?? $admin->email;
+
+                    Mail::to($emailAddress)->send(new MeetingBookedMail($admin, $assignedLead, $assignerName));
+                } catch (\Exception $e) {
+                    \Log::error('Meeting Booked Mail failed: ' . $e->getMessage());
+                }
+            }
 
             return response()->json(['message' => 'Meeting successfully booked and transferred to Admin!'], 200);
         } catch (\Exception $e) {
