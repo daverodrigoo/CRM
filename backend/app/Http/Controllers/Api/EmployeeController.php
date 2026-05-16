@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\WelcomeEmployeeMail;
 
 class EmployeeController extends Controller
 {
@@ -19,6 +21,10 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         try {
+            // 1. Capture the raw password BEFORE it gets hashed so we can email it
+            $plainPassword = $request->password;
+
+            // Create the user in the database
             $user = User::create([
                 'name'     => $request->name,
                 'email'    => $request->email,
@@ -26,7 +32,16 @@ class EmployeeController extends Controller
                 'role'     => $request->role,
             ]);
 
-            return response()->json(['message' => 'Employee created', 'user' => $user], 201);
+            // 2. NEW LOGIC: Send the welcome email!
+            try {
+                Mail::to($user->email)->send(new WelcomeEmployeeMail($user, $plainPassword));
+            } catch (\Exception $e) {
+                // If the email fails (e.g. Mailtrap is down), log it, but don't delete the user
+                \Log::error('Failed to send welcome email: ' . $e->getMessage());
+            }
+
+            return response()->json(['message' => 'Employee created and email sent successfully', 'user' => $user], 201);
+            
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to create: ' . $e->getMessage()], 500);
         }

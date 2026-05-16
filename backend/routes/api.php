@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\AuthController;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [\App\Http\Controllers\Api\AuthController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [\App\Http\Controllers\Api\AuthController::class, 'resetPassword']);
 
 Route::get('/leads', [LeadController::class, 'index']);
 

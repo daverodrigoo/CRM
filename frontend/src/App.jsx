@@ -7,12 +7,16 @@ import Employees from './pages/Employees';
 import AssignedLeads from './pages/AssignedLeads';
 import Employee_AssignedLeads from './pages/Employee_AssignedLeads';
 import MeetingsBooked from './pages/MeetingsBooked';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/leads" element={<Leads />} />
         <Route path="/meeting" element={<Meeting />} />

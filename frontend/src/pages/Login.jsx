@@ -49,7 +49,7 @@ export default function Login() {
   };
 
   const handleForgotPassword = () => {
-    console.log('Forgot password clicked');
+    navigate('/forgot-password');
   };
 
   return (

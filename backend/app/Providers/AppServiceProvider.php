@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Auth\Notifications\ResetPassword;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,7 +19,10 @@ class AppServiceProvider extends ServiceProvider
      * Bootstrap any application services.
      */
     public function boot(): void
-    {
-        //
-    }
+{
+    ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
+        // This forces the email button to point to your React app!
+        return "http://localhost:5173/reset-password?token={$token}&email={$notifiable->getEmailForPasswordReset()}";
+    });
+}
 }
