@@ -89,11 +89,13 @@ export default function Login() {
               />
             </div>
 
+            {/* FORGOT PASSWORD BUTTON
             <div className="flex justify-end pt-1">
               <button type="button" onClick={handleForgotPassword} className="text-sm font-semibold text-[#7E3A99] hover:text-[#19a828] transition-colors">
                 Forgot Password?
               </button>
             </div>
+            */}
 
             <button type="submit" className="w-full bg-[#7E3A99] hover:bg-[#19a828] text-white font-bold py-3 rounded-lg transition-colors shadow-md mt-2">
               Log In

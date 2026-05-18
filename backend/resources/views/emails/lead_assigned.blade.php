@@ -9,8 +9,10 @@
             <p style="margin: 0;"><strong>Batch Name:</strong> {{ $batchName }}</p>
             <p style="margin: 0;"><strong>Total Leads:</strong> {{ $leadCount }}</p>
         </div>
+        <!--
         <p>Please log in to your CRM Dashboard to view and contact your new leads.</p>
         <a href="http://localhost:5173/employee/leads" style="display: inline-block; background-color: #7E3A99; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View My Leads</a>
+        -->
     </div>
 </body>
 </html>

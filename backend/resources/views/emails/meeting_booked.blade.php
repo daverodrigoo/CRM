@@ -15,7 +15,9 @@
         @if(!empty($assignedLead->Meeting_Notes))
             <p><strong>Notes:</strong> {{ $assignedLead->Meeting_Notes }}</p>
         @endif
+        <!--
         <a href="http://localhost:5173/meeting" style="display: inline-block; background-color: #7E3A99; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Meeting Details</a>
+        -->
     </div>
 </body>
 </html>

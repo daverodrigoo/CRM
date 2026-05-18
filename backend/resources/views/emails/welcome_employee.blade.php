@@ -14,9 +14,11 @@
             <p style="margin: 0;"><strong>Temporary Password:</strong> {{ $plainPassword }}</p>
         </div>
 
+        <!--
         <p>Please log in and change your password as soon as possible.</p>
 
         <a href="http://localhost:5173/login" style="display: inline-block; background-color: #7E3A99; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Log In to CRM</a>
+        -->
     </div>
 </body>
 </html>
