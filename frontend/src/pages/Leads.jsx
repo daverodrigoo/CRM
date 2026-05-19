@@ -157,6 +157,10 @@ export default function Leads() {
   const [admins, setAdmins] = useState([]);
   const [selectedAdminId, setSelectedAdminId] = useState('');
   const [batchName, setBatchName] = useState('');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importState, setImportState] = useState('processing'); // 'processing', 'success', 'error'
+  const [importErrors, setImportErrors] = useState([]);
+  const [importSuccessCount, setImportSuccessCount] = useState(0);
   
   const [selectedLead, setSelectedLead] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
@@ -457,49 +461,49 @@ const confirmAssign = async () => {
     document.body.removeChild(link);
   };
 
-  // RESTORED: Full File Upload Logic
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  // --- REBUILT ALL-OR-NOTHING CSV IMPORT ENGINE ---
+  const handleFileUpload = (e) => {
+    const file = e.target?.files && e.target.files[0];
     if (!file) return;
+
+    // 1. Open the progress window immediately
+    setIsImportModalOpen(true);
+    setImportState('processing');
+    setImportErrors([]);
+    setImportSuccessCount(0);
 
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target.result;
-      const { newLeads, skipped } = parseCSVToLeads(text, leads);
       
-      if (newLeads.length > 0) {
-        let successCount = 0;
-        let failCount = 0;
-
-        for (const lead of newLeads) {
-          try {
-            await axios.post('http://localhost:8000/api/leads', lead);
-            successCount++;
-          } catch (err) {
-            failCount++;
-          }
-        }
-        
-        fetchLeads();
-        alert(`Import complete!\nSuccessfully added: ${successCount}\nFailed to add: ${failCount}\nSkipped (Duplicates): ${skipped}`);
-      } else if (skipped > 0) {
-        alert(`No new leads imported. Skipped ${skipped} duplicate(s).`);
-      } else {
-        alert('No valid leads found in the CSV.');
-      }
+      // Simulate a brief delay so the user clearly sees the "Scanning..." state
+      setTimeout(() => {
+        processCSVData(text);
+      }, 1000); 
     };
     reader.readAsText(file);
-    e.target.value = null; 
+    // reset the input so the same file can be re-uploaded if needed
+    if (e.target) e.target.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // RESTORED: Full CSV Parser Logic
-  const parseCSVToLeads = (text, currentLeads) => {
-    const lines = text.split('\n').filter(line => line.trim() !== '');
-    if (lines.length < 2) return { newLeads: [], skipped: 0 }; 
-    
-    const headers = lines[0].split(',').map(h => h.trim());
+  const processCSVData = async (text) => {
+    // Remove BOM if present and normalize CRLF to LF, then split into non-empty lines
+    const normalized = String(text).replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+    const lines = normalized.split('\n').filter(line => line.trim() !== '');
+    if (lines.length < 2) {
+      setImportState('error');
+      setImportErrors(['The CSV file is completely empty or missing data rows.']);
+      return;
+    }
+
+    // Use the first non-empty line as the header row
+    const headers = lines[0].split(',').map(h => h.replace(/["\r]/g, '').trim());
     const newLeads = [];
-    let skippedCount = 0;
+    const errors = [];
+    
+    // We track pending names to catch duplicates INSIDE the CSV itself
+    const pendingNames = new Set(); 
 
     for (let i = 1; i < lines.length; i++) {
       const values = [];
@@ -515,33 +519,126 @@ const confirmAssign = async () => {
           currentValue += char;
         }
       }
-      values.push(currentValue.trim());
+      values.push(currentValue.replace(/[\r]/g, '').trim());
 
-      const leadObj = { ...emptyForm }; 
+      const leadObj = { ...emptyForm };
+
+      // Helper: normalize common date formats to YYYY-MM-DD expected by backend
+      const normalizeDate = (val) => {
+        if (!val) return '';
+        const s = String(val).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // MM/DD/YYYY
+        if (m) {
+          const mm = String(m[1]).padStart(2, '0');
+          const dd = String(m[2]).padStart(2, '0');
+          const yyyy = m[3];
+          return `${yyyy}-${mm}-${dd}`;
+        }
+        // Fallback: try Date parsing
+        const dt = new Date(s);
+        if (!isNaN(dt)) {
+          const y = dt.getFullYear();
+          const mm2 = String(dt.getMonth() + 1).padStart(2, '0');
+          const dd2 = String(dt.getDate()).padStart(2, '0');
+          return `${y}-${mm2}-${dd2}`;
+        }
+        return s;
+      };
+      
       headers.forEach((header, index) => {
         let val = values[index] || '';
         if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-        if (header === 'Lead_ID') return; 
+        
+        // System auto-generates ID and Date_Added, ignore them from CSV
+        if (header === 'Lead_ID' || header === 'Date_Added') return; 
 
-        if (header === 'Social_Media') {
-           leadObj[header] = val.split(';').map(s => s.trim()).filter(Boolean);
-           if (leadObj[header].length === 0) leadObj[header] = [''];
-        } else if (leadObj.hasOwnProperty(header)) {
-           leadObj[header] = val;
+          if (header === 'Social_Media') {
+            leadObj[header] = val ? val.split(';').map(s => s.trim()).filter(Boolean) : [''];
+        } else if (leadObj.hasOwnProperty(header) || header === 'Acquisition_Date') {
+            // Normalize Acquisition_Date to YYYY-MM-DD
+            if (header === 'Acquisition_Date') {
+             leadObj[header] = normalizeDate(val);
+            } else {
+             leadObj[header] = val;
+            }
         }
       });
 
-      const isDuplicate = checkIsDuplicate(leadObj, [...currentLeads, ...newLeads]);
-      if (isDuplicate) {
-        skippedCount++;
-        continue;
+      const rowNum = i + 1;
+      const bName = leadObj.Business_Name ? String(leadObj.Business_Name).trim() : 'Unnamed Business';
+      const rowIdentifier = `Row ${rowNum} (${bName})`;
+
+      // --- ROW-BY-ROW STRICT VALIDATION ---
+
+      // 1. Missing Acquisition Date Check
+      if (!leadObj.Acquisition_Date || String(leadObj.Acquisition_Date).trim() === '') {
+        errors.push(`${rowIdentifier}: Acquisition Date is missing.`);
       }
 
-      leadObj.Lead_ID = generateNextId([...currentLeads, ...newLeads]);
-      if (!leadObj.Date_Added) leadObj.Date_Added = getTodayDate();
+      // 2. Exact Manual Validation Check (Business Name, Industry, Contact Logic)
+      const validation = validateLeadObj(leadObj);
+      if (!validation.isValid) {
+        errors.push(`${rowIdentifier}: ${validation.msg}`);
+      }
+
+      // 3. Duplicate Check (Against Database)
+      if (checkIsDuplicate(leadObj, leads)) {
+        errors.push(`${rowIdentifier}: This business already exists in the database.`);
+      }
+
+      // 4. Duplicate Check (Inside the CSV file)
+      const normalizedName = bName.toLowerCase();
+      if (normalizedName !== 'unnamed business') {
+        if (pendingNames.has(normalizedName)) {
+          errors.push(`${rowIdentifier}: This business name appears multiple times inside this CSV file.`);
+        } else {
+          pendingNames.add(normalizedName);
+        }
+      }
+
+      leadObj.Lead_ID = generateNextId([...leads, ...newLeads]);
       newLeads.push(leadObj);
     }
-    return { newLeads, skipped: skippedCount };
+
+    // --- ALL OR NOTHING DECISION ---
+    if (errors.length > 0) {
+      setImportErrors(errors);
+      setImportState('error');
+      return; // Stop here! Nothing gets uploaded.
+    }
+
+    // --- IF NO ERRORS: UPLOAD TO DATABASE ---
+    try {
+      let successCount = 0;
+      for (const rawLead of newLeads) {
+        // Clone and sanitize payload
+        const lead = { ...rawLead };
+        // Remove empty Social_Media arrays
+        if (Array.isArray(lead.Social_Media) && lead.Social_Media.length === 1 && lead.Social_Media[0] === '') {
+          delete lead.Social_Media;
+        }
+        // Trim string fields
+        Object.keys(lead).forEach(k => {
+          if (typeof lead[k] === 'string') lead[k] = lead[k].trim();
+        });
+
+        // Debugging aid: log payload if server returns error
+        console.debug('Uploading lead payload:', lead);
+
+        await axios.post('http://localhost:8000/api/leads', lead);
+        successCount++;
+      }
+      fetchLeads(); // Refresh the table
+      setImportSuccessCount(successCount);
+      setImportState('success');
+    } catch (err) {
+      console.error("Backend error during import:", err);
+      // Grab Laravel's exact error if it slipped past the frontend
+      const serverError = err.response?.data?.error || err.response?.data || err.message || 'Failed to save leads. Check database connection.';
+      setImportErrors([`Backend Error: ${JSON.stringify(serverError)}`]);
+      setImportState('error');
+    }
   };
 
   const handleSort = (key) => {
@@ -703,7 +800,7 @@ const confirmAssign = async () => {
                                   
                                   {isEmployeeSelectOpen && (
                                     <>
-                                      <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsEmployeeSelectOpen(false); }}></div>
+                                      <div className="fixed inset-0 z-50" onClick={(e) => { e.stopPropagation(); setIsEmployeeSelectOpen(false); }}></div>
                                       <div className="absolute left-0 top-full mt-1.5 w-full bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-1.5 max-h-48 overflow-y-auto">
                                         {admins.length === 0 ? (
                                           <div className="px-4 py-3 text-sm text-gray-500 text-center italic">No Employees available</div>
@@ -719,7 +816,7 @@ const confirmAssign = async () => {
                                     </>
                                   )}
                                 </div>
-                                <div className="flex justify-end gap-2 relative z-0">
+                                <div className="flex justify-end gap-2 relative z-40">
                                   <button onClick={() => { setIsAssignOpen(false); setIsEmployeeSelectOpen(false); }} className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-md font-medium transition-colors">Cancel</button>
                                   <button onClick={confirmAssign} disabled={!selectedAdminId} className="px-3 py-1.5 text-xs bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors disabled:opacity-50">Assign</button>
                                 </div>
@@ -960,6 +1057,79 @@ const confirmAssign = async () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ALL-OR-NOTHING IMPORT PROGRESS MODAL --- */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-down">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+              <h2 className="text-xl font-bold text-gray-800">CSV Import Status</h2>
+              {importState !== 'processing' && (
+                <button onClick={() => setIsImportModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl outline-none">&times;</button>
+              )}
+            </div>
+
+            {/* Body */}
+            <div className="p-8 overflow-y-auto flex flex-col items-center">
+              
+              {/* STATE 1: SCANNING */}
+              {importState === 'processing' && (
+                <div className="flex flex-col items-center py-8">
+                  <div className="w-12 h-12 border-4 border-[#7E3A99]/30 border-t-[#7E3A99] rounded-full animate-spin mb-4"></div>
+                  <h3 className="text-lg font-bold text-gray-800">Scanning CSV File...</h3>
+                  <p className="text-gray-500 text-sm mt-2 text-center">Checking row by row, column by column for valid data, formats, and duplicates.</p>
+                </div>
+              )}
+
+              {/* STATE 2: SUCCESS */}
+              {importState === 'success' && (
+                <div className="flex flex-col items-center py-6 w-full">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor" className="w-8 h-8 text-green-600"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Import Successful!</h3>
+                  <p className="text-gray-600 font-medium">Perfect! {importSuccessCount} new leads have been added to the database.</p>
+                </div>
+              )}
+
+              {/* STATE 3: ERROR (ALL OR NOTHING) */}
+              {importState === 'error' && (
+                <div className="w-full flex flex-col items-center">
+                   <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <span className="text-red-500 text-3xl">⚠️</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-red-600 mb-2">Import Failed</h3>
+                  <p className="text-gray-600 text-sm mb-6 text-center">We found errors in the CSV file. To prevent bad data, <b>0 leads</b> were imported. Please fix the following errors and upload the file again:</p>
+                  
+                  <div className="w-full bg-red-50 border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto text-left shadow-inner">
+                    <ul className="list-disc pl-5 space-y-2">
+                      {importErrors.map((err, idx) => (
+                        <li key={idx} className="text-sm text-red-700 font-medium">{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
+              {importState !== 'processing' && (
+                <button 
+                  onClick={() => setIsImportModalOpen(false)} 
+                  className="px-6 py-2 bg-[#7E3A99] hover:bg-[#19a828] text-white rounded-md font-medium transition-colors shadow-sm"
+                >
+                  {importState === 'success' ? 'Done' : 'Close & Fix CSV'}
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
       )}
