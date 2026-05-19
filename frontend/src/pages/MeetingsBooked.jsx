@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 
 // --- Helper Data & Components (Copied from Meeting.jsx) ---
 const emptyForm = {
-  Lead_ID: '', Date_Added: '', Business_Name: '', 
+  Lead_ID: '', Acquisition_Date: '', Date_Added: '', Business_Name: '', 
   Contact_Person_First_Name: '', Contact_Last_Name: '', Contact_Person_Phone: '', Contact_Person_Email: '',
   Business_Owner_First_Name: '', Business_Owner_Last_Name: '', Business_Owner_Phone: '', Business_Owner_Email: '',
   Business_Phone: '', Business_Email: '', Tab_Category: '',
@@ -18,7 +18,7 @@ const LeadForm = ({ formData, isReadonly }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Business Name</label><input type="text" value={formData.Business_Name || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
         <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Industry</label><input type="text" value={formData.Industry || ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Date Added</label><input type="date" value={formData.Date_Added ? formData.Date_Added.split('T')[0] : ''} disabled={true} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
+        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Acquisition Date</label><input type="date" value={formData.Acquisition_Date ? formData.Acquisition_Date.split('T') : ''} disabled={isReadonly} className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" /></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -145,6 +145,7 @@ export default function MeetingsBooked() {
       ...master,        
       ...business,      
       Business_Name: lead.Business_Name,
+      Acquisition_Date: master.Acquisition_Date || lead.Acquisition_Date || '',
       Social_Media: socialMediaLinks,
       Remarks: master.Remarks || master.Pipeline_Remarks || '' 
     };

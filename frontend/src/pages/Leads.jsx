@@ -34,7 +34,7 @@ const generateNextId = (allLeads) => {
 };
 
 const emptyForm = {
-  Lead_ID: '', Date_Added: '', Business_Name: '', 
+  Lead_ID: '', Date_Added: '', Acquisition_Date: '', Business_Name: '', 
   Contact_Person_First_Name: '', Contact_Last_Name: '', Contact_Person_Phone: '', Contact_Person_Email: '',
   Business_Owner_First_Name: '', Business_Owner_Last_Name: '', Business_Owner_Phone: '', Business_Owner_Email: '',
   Business_Phone: '', Business_Email: '', Tab_Category: '',
@@ -68,7 +68,18 @@ const LeadForm = ({ formData, handleInputChange, handleSocialMediaChange, addSoc
           <option value="Others">Others</option>
         </select>
       </div>
-        <div className="space-y-1"><label className="text-xs font-semibold text-gray-500">Date Added</label><input type="date" name="Date_Added" value={formData.Date_Added} onChange={handleInputChange} disabled={true} className="w-full border rounded p-2 text-sm disabled:bg-gray-50" /></div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-gray-500">Acquisition Date <span className="text-red-500">*</span></label>
+          <input 
+            type="date" 
+            name="Acquisition_Date" 
+            value={formData.Acquisition_Date || ''} 
+            onChange={handleInputChange} 
+            disabled={isReadonly} 
+            required
+            className="w-full border rounded p-2 text-sm disabled:bg-gray-50 bg-white" 
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -155,7 +166,7 @@ export default function Leads() {
   const [leadHistory, setLeadHistory] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'Acquisition_Date', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState('10');
   const [selectedLeads, setSelectedLeads] = useState([]);
@@ -196,7 +207,7 @@ useEffect(() => {
       const formattedLeads = response.data.map(lead => {
         const business = lead.business || {};
         return {
-          Lead_ID: lead.Lead_ID, user_id: lead.user_id, Date_Added: lead.Date_Added, Source: lead.Source || '',
+          Lead_ID: lead.Lead_ID, user_id: lead.user_id, Date_Added: lead.Date_Added, Acquisition_Date: lead.Acquisition_Date || '', Source: lead.Source || '',
           Tab_Category: lead.Tab_Category || '', Solution_Needed: lead.Solution_Needed || '', Remarks: lead.Remarks || '',
           Business_Name: business.Business_Name || '', Industry: business.Industry || '', Website_Link: business.Website_Link || '',
           Contact_Person_First_Name: business.Contact_Person_First_Name || '', Contact_Last_Name: business.Contact_Last_Name || '',
@@ -246,6 +257,7 @@ useEffect(() => {
 
   const validateLeadObj = (lead) => {
     // 1. Core required fields
+    if (!lead.Acquisition_Date) return { isValid: false, msg: 'Acquisition Date is required.' };
     if (!lead.Business_Name || String(lead.Business_Name).trim() === '' || 
         !lead.Industry || String(lead.Industry).trim() === '') {
       return { isValid: false, msg: 'Business Name and Industry are required.' };
@@ -274,16 +286,16 @@ useEffect(() => {
     if (!isValidPhone(lead.Contact_Person_Phone)) return { isValid: false, msg: 'Invalid Contact Person Phone format. Use only numbers, spaces, and + - ( )' };
     if (!isValidEmail(lead.Contact_Person_Email)) return { isValid: false, msg: 'Invalid Contact Person Email format.' };
 
-    // 2. Cascading Contact Information Check
-    const hasBusinessContact = lead.Business_Phone && String(lead.Business_Phone).trim() !== '' && lead.Business_Email && String(lead.Business_Email).trim() !== '';
-    const hasOwnerContact = lead.Business_Owner_Phone && String(lead.Business_Owner_Phone).trim() !== '' && lead.Business_Owner_Email && String(lead.Business_Owner_Email).trim() !== '';
-    const hasPersonContact = lead.Contact_Person_Phone && String(lead.Contact_Person_Phone).trim() !== '' && lead.Contact_Person_Email && String(lead.Contact_Person_Email).trim() !== '';
+    // 3. Cascading Contact Information Check (Requires AT LEAST ONE Phone OR Email)
+    const hasBusinessContact = (lead.Business_Phone && String(lead.Business_Phone).trim() !== '') || (lead.Business_Email && String(lead.Business_Email).trim() !== '');
+    const hasOwnerContact = (lead.Business_Owner_Phone && String(lead.Business_Owner_Phone).trim() !== '') || (lead.Business_Owner_Email && String(lead.Business_Owner_Email).trim() !== '');
+    const hasPersonContact = (lead.Contact_Person_Phone && String(lead.Contact_Person_Phone).trim() !== '') || (lead.Contact_Person_Email && String(lead.Contact_Person_Email).trim() !== '');
 
-    // If all three pairs are incomplete, it fails validation
+    // If NO contact info is provided at all, it fails validation
     if (!hasBusinessContact && !hasOwnerContact && !hasPersonContact) {
       return { 
         isValid: false, 
-        msg: 'You must provide a complete Phone and Email pair for either the Business, the Business Owner, or the Contact Person.' 
+        msg: 'You must provide at least a Phone or an Email for either the Business, the Business Owner, or the Contact Person.' 
       };
     }
 
@@ -735,8 +747,11 @@ const confirmAssign = async () => {
                     <th className="px-6 py-4 whitespace-nowrap">Business Owner Info</th>
                     <th className="px-6 py-4 whitespace-nowrap">Business Info</th>
                     <th className="px-6 py-4 whitespace-nowrap">Contact Person Info</th>
+                    <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-[#6c3282] transition-colors" onClick={() => handleSort('Acquisition_Date')}>
+                    <div className="flex items-center">Acquisition Date {renderSortIcon('Acquisition_Date')}</div>
+                  </th>
                     <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-[#6c3282] transition-colors" onClick={() => handleSort('Date_Added')}>
-                      <div className="flex items-center">Date Added {renderSortIcon('Date_Added')}</div>
+                      <div className="flex items-center">Date Created {renderSortIcon('Date_Added')}</div>
                     </th>
                     <th className="px-6 py-4 text-center whitespace-nowrap">Action</th>
                   </>
@@ -763,7 +778,8 @@ const confirmAssign = async () => {
                     <td className="px-6 py-4 text-gray-500 text-xs"><div>📞 {lead.Business_Owner_Phone || 'N/A'}</div><div>✉️ {lead.Business_Owner_Email || 'N/A'}</div></td>
                     <td className="px-6 py-4 text-gray-500 text-xs"><div>📞 {lead.Business_Phone || 'N/A'}</div><div>✉️ {lead.Business_Email || 'N/A'}</div></td>
                     <td className="px-6 py-4 text-gray-500 text-xs"><div>📞 {lead.Contact_Person_Phone || 'N/A'}</div><div>✉️ {lead.Contact_Person_Email || 'N/A'}</div></td>
-                    <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{lead.Date_Added || 'N/A'}</td>
+                    <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{lead.Acquisition_Date ? new Date(lead.Acquisition_Date).toLocaleDateString() : 'N/A'}</td>
+                    <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{lead.Date_Added ? new Date(lead.Date_Added).toLocaleDateString() : 'N/A'}</td>
                     <td className="px-6 py-4 text-center">
                       <button onClick={() => openViewModal(lead)} className="text-[#7E3A99] hover:text-[#19a828] font-bold transition-colors">
                         View Details

@@ -79,6 +79,7 @@ class LeadController extends Controller
                 'Lead_ID'         => $leadId,
                 'Business_ID'     => $business->Business_ID,
                 'Date_Added'      => $dateAdded,
+                'Acquisition_Date' => is_array($request->Acquisition_Date) ? null : $request->Acquisition_Date,
                 'Source'          => is_array($request->Source) ? '' : (string)$request->Source,
                 'Tab_Category'    => is_array($request->Tab_Category) ? '' : (string)$request->Tab_Category,
                 'Solution_Needed' => is_array($request->Solution_Needed) ? '' : (string)$request->Solution_Needed,
@@ -116,6 +117,7 @@ class LeadController extends Controller
             if (!$lead) return response()->json(['message' => 'Lead not found.'], 404);
 
             $lead->update([
+                'Acquisition_Date' => $this->safeString($request->Acquisition_Date),
                 'Source'          => $this->safeString($request->Source),
                 'Tab_Category'    => $this->safeString($request->Tab_Category),
                 'Solution_Needed' => $this->safeString($request->Solution_Needed),
