@@ -311,20 +311,30 @@ useEffect(() => {
 
   const handleSaveNew = async (e) => {
     e.preventDefault();
+    
+    // 1. Run the instant frontend validation first
     if (!validateForm()) return;
-    if (checkIsDuplicate(formData, leads)) {
-      setErrorMsg('A lead with this Business Name and Industry already exists.');
-      return;
-    }
+    
     try {
       const newLeadData = { ...formData, Lead_ID: generateNextId(leads) };
       await axios.post('http://localhost:8000/api/leads', newLeadData);
+      
+      // Success!
       fetchLeads(); 
       setIsAddOpen(false);
       setFormData(emptyForm);
       setErrorMsg('');
+      
     } catch (error) {
-      setErrorMsg("Failed to save lead to the database. Please try again.");
+      // 2. Check if Laravel rejected the data (Status 422)
+      if (error.response && error.response.status === 422) {
+        // Extract the exact error message Laravel sent back
+        const validationErrors = error.response.data.errors;
+        const firstErrorKey = Object.keys(validationErrors);
+        setErrorMsg(validationErrors[firstErrorKey]);
+      } else {
+        setErrorMsg("Failed to save lead to the database. Please check your connection.");
+      }
     }
   };
 
@@ -656,8 +666,8 @@ const confirmAssign = async () => {
                   />
                 </th>
 
-{selectedLeads.length > 0 ? (
-                  <th colSpan="8" className="px-4 py-4 whitespace-nowrap bg-[#6c3282]">
+                  {selectedLeads.length > 0 ? (
+                  <th colSpan="9" className="px-4 py-4 whitespace-nowrap bg-[#6c3282]">
                     <div className="flex items-center gap-6">
                       <span className="font-bold bg-white/20 px-3 py-1 rounded-full text-xs">
                         {selectedLeads.length} selected

@@ -37,27 +37,83 @@ class LeadController extends Controller
     // POST: Save a new lead
     public function store(Request $request)
     {
+        // 1. Laravel Best Practice Validation (Protects the database)
+        $validated = $request->validate([
+            'Business_Name'             => 'required|string|max:255',
+            'Industry'                  => 'required|string|max:255',
+            'Acquisition_Date'          => 'required|date',
+            
+            // Emails
+            'Business_Email'            => 'nullable|email|max:255',
+            'Business_Owner_Email'      => 'nullable|email|max:255',
+            'Contact_Person_Email'      => 'nullable|email|max:255',
+            
+            // Phones
+            'Business_Phone'            => 'nullable|string|max:50',
+            'Business_Owner_Phone'      => 'nullable|string|max:50',
+            'Contact_Person_Phone'      => 'nullable|string|max:50',
+
+            // Strings
+            'Website_Link'              => 'nullable|string|max:255',
+            'Business_Owner_First_Name' => 'nullable|string|max:255',
+            'Business_Owner_Last_Name'  => 'nullable|string|max:255',
+            'Contact_Person_First_Name' => 'nullable|string|max:255',
+            'Contact_Last_Name'         => 'nullable|string|max:255',
+            'Source'                    => 'nullable|string|max:255',
+            'Tab_Category'              => 'nullable|string|max:255',
+            'Solution_Needed'           => 'nullable|string',
+            'Remarks'                   => 'nullable|string',
+            
+            // Arrays & System fields
+            'Date_Added'                => 'nullable|date',
+            'Lead_ID'                   => 'nullable|string',
+            'Social_Media'              => 'nullable|array',
+            'Social_Media.*'            => 'nullable|string' 
+        ]);
+
+        // 2. Custom Backend Validation: Cascading Contact Rule
+        $hasBusiness = !empty($request->Business_Phone) || !empty($request->Business_Email);
+        $hasOwner    = !empty($request->Business_Owner_Phone) || !empty($request->Business_Owner_Email);
+        $hasPerson   = !empty($request->Contact_Person_Phone) || !empty($request->Contact_Person_Email);
+
+        if (!$hasBusiness && !$hasOwner && !$hasPerson) {
+            return response()->json([
+                'errors' => ['contact' => ['You must provide at least a Phone or an Email for the Business, Owner, or Contact Person.']]
+            ], 422);
+        }
+
+        // 3. Custom Backend Validation: Duplicate Check (Business Name ONLY)
+        $isDuplicate = \App\Models\Business::whereRaw('LOWER(Business_Name) = ?', [strtolower(trim($request->Business_Name))])
+            ->exists();
+
+        if ($isDuplicate) {
+            return response()->json([
+                'errors' => ['duplicate' => ['A lead with this Business Name already exists in the database.']]
+            ], 422);
+        }
+
+        // 4. Begin Safe Database Entry
         DB::beginTransaction();
 
         try {
-            // 1. Create the Business Record (Strictly forcing strings)
+            // Create the Business Record (Data is already validated and safe)
             $business = Business::create([
-                'Business_Name'             => is_array($request->Business_Name) ? '' : (string)$request->Business_Name,
-                'Industry'                  => is_array($request->Industry) ? '' : (string)$request->Industry,
-                'Website_Link'              => is_array($request->Website_Link) ? '' : (string)$request->Website_Link,
-                'Contact_Person_First_Name' => is_array($request->Contact_Person_First_Name) ? '' : (string)$request->Contact_Person_First_Name,
-                'Contact_Last_Name'         => is_array($request->Contact_Last_Name) ? '' : (string)$request->Contact_Last_Name,
-                'Contact_Person_Phone'      => is_array($request->Contact_Person_Phone) ? '' : (string)$request->Contact_Person_Phone,
-                'Contact_Person_Email'      => is_array($request->Contact_Person_Email) ? '' : (string)$request->Contact_Person_Email,
-                'Business_Owner_First_Name' => is_array($request->Business_Owner_First_Name) ? '' : (string)$request->Business_Owner_First_Name,
-                'Business_Owner_Last_Name'  => is_array($request->Business_Owner_Last_Name) ? '' : (string)$request->Business_Owner_Last_Name,
-                'Business_Owner_Phone'      => is_array($request->Business_Owner_Phone) ? '' : (string)$request->Business_Owner_Phone,
-                'Business_Owner_Email'      => is_array($request->Business_Owner_Email) ? '' : (string)$request->Business_Owner_Email,
-                'Business_Phone'            => is_array($request->Business_Phone) ? '' : (string)$request->Business_Phone,
-                'Business_Email'            => is_array($request->Business_Email) ? '' : (string)$request->Business_Email,
+                'Business_Name'             => $request->Business_Name,
+                'Industry'                  => $request->Industry,
+                'Website_Link'              => $request->Website_Link ?? '',
+                'Contact_Person_First_Name' => $request->Contact_Person_First_Name ?? '',
+                'Contact_Last_Name'         => $request->Contact_Last_Name ?? '',
+                'Contact_Person_Phone'      => $request->Contact_Person_Phone ?? '',
+                'Contact_Person_Email'      => $request->Contact_Person_Email ?? '',
+                'Business_Owner_First_Name' => $request->Business_Owner_First_Name ?? '',
+                'Business_Owner_Last_Name'  => $request->Business_Owner_Last_Name ?? '',
+                'Business_Owner_Phone'      => $request->Business_Owner_Phone ?? '',
+                'Business_Owner_Email'      => $request->Business_Owner_Email ?? '',
+                'Business_Phone'            => $request->Business_Phone ?? '',
+                'Business_Email'            => $request->Business_Email ?? '',
             ]);
 
-            // 2. BULLETPROOF ID GENERATOR (Never duplicates!)
+            // BULLETPROOF ID GENERATOR (Never duplicates!)
             $leadId = is_array($request->Lead_ID) ? '' : (string)$request->Lead_ID;
             if (empty($leadId)) {
                 $nextNumber = 1;
@@ -74,19 +130,19 @@ class LeadController extends Controller
                 $dateAdded = date('Y-m-d'); 
             }
 
-            // 3. Create the Lead Record
+            // Create the Lead Record
             $lead = Lead::create([
                 'Lead_ID'         => $leadId,
                 'Business_ID'     => $business->Business_ID,
                 'Date_Added'      => $dateAdded,
-                'Acquisition_Date' => is_array($request->Acquisition_Date) ? null : $request->Acquisition_Date,
-                'Source'          => is_array($request->Source) ? '' : (string)$request->Source,
-                'Tab_Category'    => is_array($request->Tab_Category) ? '' : (string)$request->Tab_Category,
-                'Solution_Needed' => is_array($request->Solution_Needed) ? '' : (string)$request->Solution_Needed,
-                'Remarks'         => is_array($request->Remarks) ? '' : (string)$request->Remarks,
+                'Acquisition_Date'=> is_array($request->Acquisition_Date) ? null : $request->Acquisition_Date,
+                'Source'          => $request->Source ?? '',
+                'Tab_Category'    => $request->Tab_Category ?? '',
+                'Solution_Needed' => $request->Solution_Needed ?? '',
+                'Remarks'         => $request->Remarks ?? '',
             ]);
 
-            // 4. Create Social Media Records
+            // Create Social Media Records
             if ($request->has('Social_Media') && is_array($request->Social_Media)) {
                 foreach ($request->Social_Media as $url) {
                     if (!empty(trim((string)$url))) {
