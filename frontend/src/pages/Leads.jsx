@@ -429,7 +429,13 @@ const confirmAssign = async () => {
       fetchLeads();
     } catch (error) {
       console.error("Error assigning leads:", error);
-      alert("Failed to assign leads. Please check backend connection.");
+      
+      // Check if Laravel threw a Validation Error (Status 422)
+      if (error.response && error.response.status === 422 && error.response.data.errors?.batch_name) {
+        alert(error.response.data.errors.batch_name); // Shows "This Batch Name already exists..."
+      } else {
+        alert("Failed to assign leads. Please check backend connection.");
+      }
     }
   };
 
@@ -567,6 +573,13 @@ const confirmAssign = async () => {
 
       const rowNum = i + 1;
       const bName = leadObj.Business_Name ? String(leadObj.Business_Name).trim() : 'Unnamed Business';
+
+      // --- NEW: INSTRUCTION ROW BYPASS ---
+      // If the row contains the template guides, skip it completely without throwing an error
+      if (bName === '--- GUIDE ---' || String(leadObj.Acquisition_Date).includes('YYYY-MM-DD')) {
+        continue;
+      }
+
       const rowIdentifier = `Row ${rowNum} (${bName})`;
 
       // --- ROW-BY-ROW STRICT VALIDATION ---

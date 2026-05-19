@@ -242,11 +242,13 @@ class LeadController extends Controller
 // --- Assign leads to an employee (Creates a Tab/Batch and Photocopies) ---
     public function assignLeads(Request $request)
     {
-        // 1. Validate the incoming request (Now requires a batch_name!)
+        // 1. Validate the incoming request (Enforce Unique Batch Name!)
         $validated = $request->validate([
             'lead_ids' => 'required|array',
             'employee_id' => 'required|exists:users,id',
-            'batch_name' => 'required|string|max:255', 
+            'batch_name' => 'required|string|max:255|unique:assignment_batches,Batch_Name', 
+        ], [
+            'batch_name.unique' => 'This Batch Name already exists. Please choose a different name.'
         ]);
 
         try {
