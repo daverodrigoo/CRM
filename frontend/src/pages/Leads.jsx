@@ -174,10 +174,15 @@ export default function Leads() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState('10');
   const [selectedLeads, setSelectedLeads] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const fileInputRef = useRef(null);
 
 useEffect(() => {
+    // Get current user ID from localStorage for lead ownership tracking
+    const userId = localStorage.getItem('USER_ID');
+    setCurrentUserId(userId);
+    
     fetchLeads();
     fetchAdmins();
   }, []);
@@ -320,7 +325,11 @@ useEffect(() => {
     if (!validateForm()) return;
     
     try {
-      const newLeadData = { ...formData, Lead_ID: generateNextId(leads) };
+      const newLeadData = { 
+        ...formData, 
+        Lead_ID: generateNextId(leads),
+        user_id: currentUserId  // Associate lead with current user
+      };
       await axios.post('http://localhost:8000/api/leads', newLeadData);
       
       // Success!
@@ -627,6 +636,8 @@ const confirmAssign = async () => {
       for (const rawLead of newLeads) {
         // Clone and sanitize payload
         const lead = { ...rawLead };
+        // Associate lead with current user
+        lead.user_id = currentUserId;
         // Remove empty Social_Media arrays
         if (Array.isArray(lead.Social_Media) && lead.Social_Media.length === 1 && lead.Social_Media[0] === '') {
           delete lead.Social_Media;

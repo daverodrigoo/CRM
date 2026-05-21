@@ -67,6 +67,7 @@ class LeadController extends Controller
             // Arrays & System fields
             'Date_Added'                => 'nullable|date',
             'Lead_ID'                   => 'nullable|string',
+            'user_id'                   => 'nullable|integer',
             'Social_Media'              => 'nullable|array',
             'Social_Media.*'            => 'nullable|string' 
         ]);
@@ -134,6 +135,7 @@ class LeadController extends Controller
             $lead = Lead::create([
                 'Lead_ID'         => $leadId,
                 'Business_ID'     => $business->Business_ID,
+                'user_id'         => $request->user_id ?? null,
                 'Date_Added'      => $dateAdded,
                 'Acquisition_Date'=> is_array($request->Acquisition_Date) ? null : $request->Acquisition_Date,
                 'Source'          => $request->Source ?? '',
@@ -538,8 +540,8 @@ class LeadController extends Controller
                 'Meeting_Assigned_to' => $request->Meeting_Assigned_to,
                 'Service_Offered' => $request->Service_Offered,
                 'Meeting_Notes' => $request->Meeting_Notes,
-                'Assigned_By' => $request->Assigned_By
-                //'Meeting_Booked' => true, // Auto-mark as booked
+                'Assigned_By' => $request->Assigned_By,
+                'Meeting_Booked' => true,
             ]);
 
             // --- NEW: Trigger Email Notification ---
