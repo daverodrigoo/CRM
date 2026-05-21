@@ -84,32 +84,27 @@ export default function Dashboard() {
     
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    // --- A. CALCULATE LEADS ADDED (FIXED: NOW FILTERS BY SELECTED USER) ---
+    // --- A. CALCULATE LEADS ADDED ---
     let addedToday = 0, addedWeek = 0, addedMonth = 0;
     rawLeads.forEach(lead => {
-      // 1. Check if this lead belongs to the currently monitored user
-      const leadOwnerId = lead.user_id || lead.User_ID || lead.Employee_ID;
+      const leadOwnerId = String(lead.User_ID || lead.user_id || lead.Employee_ID || '');
       let includeLead = false;
 
       if (userRole === 'Admin') {
-        includeLead = true; // Admins always see master totals
+        includeLead = true; 
       } else if (userRole === 'Super Admin') {
         if (userFilter === 'All Users') {
           includeLead = true;
         } else {
-          // Compare as numbers/strings to the selected user filter value
-          includeLead = (leadOwnerId && String(leadOwnerId) === String(userFilter));
+          includeLead = leadOwnerId === String(userFilter);
         }
       } else {
-        // Employees only see what they personally added
-        includeLead = (leadOwnerId && String(leadOwnerId) === String(currentUserId));
+        includeLead = leadOwnerId === String(currentUserId);
       }
 
-      // If the lead doesn't belong to the monitored person, skip it
       if (!includeLead) return;
       
-      // 2. Process the Date securely - Use Date_Added (when lead was added to system)
-      const dStr = lead.Date_Added || lead.created_at;
+      const dStr = lead.Acquisition_Date || lead.created_at || lead.Date_Added;
       if (!dStr) return;
       
       const d = new Date(dStr);
@@ -122,93 +117,103 @@ export default function Dashboard() {
       if (d >= startOfMonth) addedMonth++;
     });
 
-    // --- B. FLATTEN KPI DATA & ISOLATE NOTIFICATIONS ---
+    // --- B. FLATTEN KPI DATA & GENERATE STRICT NOTIFICATIONS ---
     let kpiLeads = [];
-    let myPersonalLeads = []; 
-    let addedLeadIds = new Set(); // Track which leads we've already added
-    
+    let generatedNotifications = [];
+
     if (userRole === 'Super Admin' || userRole === 'Admin') {
       rawSummary.forEach(userGroup => {
-        const uId = userGroup.User_ID;
-        const isMe = String(uId) === String(currentUserId);
+        const batchOwnerId = userGroup.User_ID;
 
-        let includeUser = false;
+        // KPI Filter Logic
+        let includeUserForKPI = false;
         if (userRole === 'Admin') {
-          includeUser = true; 
+          includeUserForKPI = true; 
         } else {
           if (userFilter === 'All Users') {
-            includeUser = true;
+            includeUserForKPI = true;
           } else {
-            includeUser = String(uId) === String(userFilter);
+            includeUserForKPI = String(batchOwnerId) === String(userFilter);
           }
         }
 
         userGroup.Batches.forEach(batch => {
           batch.Leads.forEach(lead => {
-            if (isMe) {
-              myPersonalLeads.push(lead);
-              addedLeadIds.add(lead.Assigned_Lead_ID);
+            const assignId = lead.Assigned_Lead_ID || lead.id;
+            
+            // --- SIMPLE NOTIFICATION LOGIC ---
+            // 1. "New Lead Assigned" - Triggered if you are the original Batch Owner
+            if (String(batchOwnerId) === String(currentUserId)) {
+              if (lead.Date_Assigned || lead.created_at) {
+                generatedNotifications.push({
+                  id: `assign-${assignId}`, 
+                  type: 'assigned',
+                  title: 'New Lead Assigned',
+                  message: `You were assigned a new lead: ${lead.Business_Name}`,
+                  _sortTime: new Date(lead.Date_Assigned || lead.created_at).getTime()
+                });
+              }
             }
-            if (includeUser && lead.Completed) kpiLeads.push(lead); 
+
+            // 2. "Meeting Booked!" - Triggered ONLY if you are the Assigned_To person
+            const isBooked = lead.Meeting_Date != null && lead.Meeting_Date !== '';
+            const meetingAssignee = lead.Meeting_Assigned_to;
+
+            if (isBooked && String(meetingAssignee) === String(currentUserId)) {
+              generatedNotifications.push({
+                id: `meet-${assignId}`, 
+                type: 'meeting',
+                title: 'Meeting Booked!',
+                message: `A meeting was booked with ${lead.Business_Name}`,
+                _sortTime: new Date(lead.updated_at || lead.Date_Assigned || new Date()).getTime()
+              });
+            }
+
+            // --- KPI LOGIC ---
+            if (includeUserForKPI && lead.Completed) {
+              kpiLeads.push(lead); 
+            }
           });
         });
       });
-
-      // --- FOR ADMINS: ALSO INCLUDE MEETINGS ASSIGNED TO THEM ---
-      if (userRole === 'Admin' || userRole === 'Super Admin') {
-        rawSummary.forEach(userGroup => {
-          userGroup.Batches.forEach(batch => {
-            batch.Leads.forEach(lead => {
-              // Include leads where this admin is the Meeting_Assigned_to and meeting is fully booked
-              if (String(lead.Meeting_Assigned_to) === String(currentUserId) && 
-                  (lead.Meeting_Booked === true || lead.Meeting_Booked === 'Yes') &&
-                  lead.Meeting_Date && lead.Meeting_Time &&
-                  !addedLeadIds.has(lead.Assigned_Lead_ID)) {
-                myPersonalLeads.push(lead);
-                addedLeadIds.add(lead.Assigned_Lead_ID);
-              }
-            });
-          });
-        });
-      }
     } else {
+      // Employees Logic
       rawMyAssigned.forEach(batch => {
+        const batchOwnerId = currentUserId; 
         batch.leads.forEach(lead => {
-          myPersonalLeads.push(lead);
+          const assignId = lead.Assigned_Lead_ID || lead.id;
+          
+          if (lead.Date_Assigned || lead.created_at) {
+            generatedNotifications.push({
+              id: `assign-${assignId}`, 
+              type: 'assigned',
+              title: 'New Lead Assigned',
+              message: `You were assigned a new lead: ${lead.Business_Name}`,
+              _sortTime: new Date(lead.Date_Assigned || lead.created_at).getTime()
+            });
+          }
+
+          const isBooked = lead.Meeting_Date != null && lead.Meeting_Date !== '';
+          const meetingAssignee = lead.Meeting_Assigned_to;
+
+          if (isBooked && String(meetingAssignee) === String(currentUserId)) {
+            generatedNotifications.push({
+              id: `meet-${assignId}`, 
+              type: 'meeting',
+              title: 'Meeting Booked!',
+              message: `A meeting was booked with ${lead.Business_Name}`,
+              _sortTime: new Date(lead.updated_at || lead.Date_Assigned || new Date()).getTime()
+            });
+          }
+
           if (lead.Completed) kpiLeads.push(lead); 
         });
       });
     }
 
-    // --- GENERATE NOTIFICATIONS (NO TIMESTAMPS) ---
-    let generatedNotifications = [];
-    myPersonalLeads.forEach(lead => {
-      const assignId = lead.Assigned_Lead_ID || lead.id;
-      
-      if (lead.Date_Assigned || lead.created_at) {
-        generatedNotifications.push({
-          id: `assign-${assignId}`, 
-          type: 'assigned',
-          title: 'New Lead Assigned',
-          message: `You were assigned a new lead: ${lead.Business_Name}`
-        });
-      }
-      
-      // Only notify if meeting is FULLY BOOKED (with all required details)
-      if ((lead.Meeting_Booked === true || lead.Meeting_Booked === 'Yes') && 
-          lead.Meeting_Date && 
-          lead.Meeting_Time && 
-          lead.Meeting_Assigned_to) {
-        generatedNotifications.push({
-          id: `meet-${assignId}`, 
-          type: 'meeting',
-          title: 'Meeting Booked!',
-          message: `A meeting was booked with ${lead.Business_Name}`
-        });
-      }
-    });
-
-    setNotifications(generatedNotifications.reverse());
+    // Sort newest first based on background timestamps
+    generatedNotifications.sort((a, b) => (b._sortTime || 0) - (a._sortTime || 0));
+    setNotifications(generatedNotifications);
 
     // --- C. APPLY TIME FILTER TO KPIS ---
     kpiLeads = kpiLeads.filter(lead => {
@@ -240,7 +245,7 @@ export default function Dashboard() {
     kpiLeads.forEach(lead => {
       const type = lead.Inquiry_Type || (lead.inquiries && lead.inquiries.length > 0 ? lead.inquiries : 'None');
       const responded = lead.Responded === true || lead.Responded === 'Yes';
-      const booked = lead.Meeting_Booked === true || lead.Meeting_Booked === 'Yes';
+      const booked = lead.Meeting_Booked === true || lead.Meeting_Booked === 1 || lead.Meeting_Booked === '1' || lead.Meeting_Booked === 'Yes' || (lead.Meeting_Date != null && lead.Meeting_Date !== '');
 
       if (type === 'Cold Call') {
         callsSent++;

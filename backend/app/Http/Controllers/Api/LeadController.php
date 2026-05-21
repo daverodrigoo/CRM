@@ -328,6 +328,7 @@ class LeadController extends Controller
                             'Service_Offered' => $assignedLead->Service_Offered,
                             'Deal_Closed' => (bool) $assignedLead->Deal_Closed,
                             'Deal_Value' => $assignedLead->Deal_Value,
+                            'updated_at' => $assignedLead->updated_at,
                             'inquiries' => $assignedLead->inquiries->pluck('Inquiry_Type'),
                             
                             // Master Lead & Business Data (For the UI table & View Modal)
@@ -464,6 +465,9 @@ class LeadController extends Controller
                                     'Completed' => (bool) $lead->Completed,
                                     'Responded' => is_null($lead->Responded) ? null : (bool) $lead->Responded,
                                     'Meeting_Booked' => is_null($lead->Meeting_Booked) ? null : (bool) $lead->Meeting_Booked,
+                                    'Meeting_Date' => $lead->Meeting_Date,
+                                    'Meeting_Assigned_to' => $lead->Meeting_Assigned_to,
+                                    'updated_at' => $lead->updated_at,
                                     'Inquiry_Type' => $lead->inquiries->first()->Inquiry_Type ?? 'None',
                                     'Remarks' => $lead->Remarks
                                 ];
