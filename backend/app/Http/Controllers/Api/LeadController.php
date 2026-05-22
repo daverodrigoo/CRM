@@ -468,6 +468,8 @@ class LeadController extends Controller
                                     'Meeting_Booked' => is_null($lead->Meeting_Booked) ? null : (bool) $lead->Meeting_Booked,
                                     'Meeting_Date' => $lead->Meeting_Date,
                                     'Meeting_Assigned_to' => $lead->Meeting_Assigned_to,
+                                    'Meeting_Time' => $lead->Meeting_Time,
+                                    'Meeting_Type' => $lead->Meeting_Type,
                                     'updated_at' => $lead->updated_at,
                                     'Inquiry_Type' => $lead->inquiries->first()->Inquiry_Type ?? 'None',
                                     'Remarks' => $lead->Remarks

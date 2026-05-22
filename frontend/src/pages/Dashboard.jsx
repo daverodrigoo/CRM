@@ -41,6 +41,11 @@ export default function Dashboard() {
     }
   };
 
+  // --- PORTION 3 STATES ---
+  const [activeBatchTab, setActiveBatchTab] = useState('Incomplete');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
   // 1. FETCH THE DATA FROM LARAVEL ONCE ON LOAD
   useEffect(() => {
     const fetchData = async () => {
@@ -331,6 +336,70 @@ export default function Dashboard() {
     return role === 'employee' || role === 'super admin';
   });
 
+  // ==========================================================
+  // PORTION 3 CALCULATION LOGIC (Batches & Meetings)
+  // ==========================================================
+  
+  // -- For Employees: Batch Progress --
+  const employeeBatches = [];
+  if (userRole === 'Employee') {
+      rawMyAssigned.forEach(batch => {
+          const total = batch.leads.length;
+          const completed = batch.leads.filter(l => l.Completed).length;
+          const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
+          employeeBatches.push({
+              id: batch.Batch_ID || Math.random(),
+              name: batch.Batch_Name,
+              total,
+              completed,
+              progress,
+              isDone: total > 0 && completed === total
+          });
+      });
+  }
+  const incompleteBatches = employeeBatches.filter(b => !b.isDone);
+  const completedBatches = employeeBatches.filter(b => b.isDone);
+  const displayedBatches = activeBatchTab === 'Incomplete' ? incompleteBatches : completedBatches;
+
+  // -- For Admins: Calendar Meetings --
+  let adminMeetings = [];
+  if (userRole === 'Super Admin' || userRole === 'Admin') {
+      rawSummary.forEach(group => {
+          group.Batches.forEach(batch => {
+              batch.Leads.forEach(lead => {
+                  const isBooked = lead.Meeting_Date != null && lead.Meeting_Date !== '';
+                  if (isBooked && String(lead.Meeting_Assigned_to) === String(currentUserId)) {
+                      adminMeetings.push({
+                          id: lead.Assigned_Lead_ID || lead.id,
+                          date: String(lead.Meeting_Date).substring(0, 10), // Extract YYYY-MM-DD safely
+                          time: lead.Meeting_Time || 'TBD',
+                          type: lead.Meeting_Type || 'Meeting',
+                          business: lead.Business_Name || 'Unknown',
+                      });
+                  }
+              });
+          });
+      });
+  }
+
+  // Calendar Helpers
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  
+  const calendarDays = [];
+  for (let i = 0; i < firstDayOfMonth; i++) calendarDays.push(null);
+  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
+
+  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  
+  const formatCalendarDateStr = (dateObj) => {
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+  };
+
+  const selectedDateStr = formatCalendarDateStr(selectedDate);
+  const selectedDateMeetings = adminMeetings.filter(m => m.date === selectedDateStr);
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col">
       <Navbar />
@@ -343,8 +412,7 @@ export default function Dashboard() {
         <div className="w-full lg:w-1/2 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 h-full overflow-hidden">
           
           <div className="bg-[#7E3A99] px-5 py-4 flex-shrink-0">
-            <h2 className="text-lg font-bold text-white tracking-wide">CRM KPI Summary</h2>
-            <p className="text-[#eaddf0] text-xs mt-0.5">Real-time performance metrics</p>
+            <h2 className="text-lg font-bold text-white tracking-wide">CRM KPI</h2>
           </div>
 
           <div className="bg-white border-b border-gray-100 px-5 py-3 flex flex-row flex-wrap items-center gap-6 flex-shrink-0">
@@ -401,15 +469,18 @@ export default function Dashboard() {
           </div>
           
           <div className="flex-1 overflow-y-auto p-0">
-            <table className="min-w-full text-xs text-left">
+            {/* Added h-full to the table so it stretches, and bumped the base text size */}
+            <table className="min-w-full text-[13px] text-left h-full">
               <tbody className="divide-y divide-gray-100/80">
                 {kpiMetrics.map((metric, index) => (
                   <tr key={index} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-5 py-3 font-medium text-gray-500 group-hover:text-gray-700 transition-colors">
+                    {/* Increased vertical padding (py-[15px]) and horizontal padding (px-6) */}
+                    <td className="px-6 py-[15px] font-medium text-gray-500 group-hover:text-gray-700 transition-colors align-middle">
                       {metric.label}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <span className="font-bold text-gray-800 text-sm">
+                    <td className="px-6 py-[15px] text-right align-middle">
+                      {/* Bumped the value text size from text-sm to text-[15px] */}
+                      <span className="font-bold text-gray-800 text-[15px]">
                         {metric.value}
                       </span>
                     </td>
@@ -510,9 +581,145 @@ export default function Dashboard() {
           {/* ========================================== */}
           {/* PORTION 3: BOTTOM RIGHT                    */}
           {/* ========================================== */}
-          <div className="h-[calc(50%-12px)] bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-400 font-medium overflow-hidden">
-            <span className="text-xl">Portion 3</span>
-            <span className="text-sm font-normal mt-2">Waiting for instructions...</span>
+          <div className="h-[calc(50%-12px)] bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+            {userRole === 'Employee' ? (
+              
+              // ------------------------------------------
+              // PORTION 3: EMPLOYEE (Batch Progress)
+              // ------------------------------------------
+              <>
+                <div className="bg-white px-5 pt-4 pb-0 border-b border-gray-100 flex flex-col flex-shrink-0 z-10 gap-3">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-[15px] font-bold text-gray-800">Batch Progress</h2>
+                  </div>
+                  <div className="flex gap-4 text-xs font-semibold">
+                    <button
+                      onClick={() => setActiveBatchTab('Incomplete')}
+                      className={`pb-2 border-b-2 transition-colors ${activeBatchTab === 'Incomplete' ? 'border-[#7E3A99] text-[#7E3A99]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    >
+                      Incomplete
+                    </button>
+                    <button
+                      onClick={() => setActiveBatchTab('Completed')}
+                      className={`pb-2 border-b-2 transition-colors ${activeBatchTab === 'Completed' ? 'border-[#7E3A99] text-[#7E3A99]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    >
+                      Completed
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-5 relative">
+                  {displayedBatches.length > 0 ? displayedBatches.map(batch => (
+                    <div key={batch.id} className="mb-5 last:mb-0">
+                      <div className="flex justify-between text-[13px] mb-1.5">
+                        <span className="font-bold text-gray-700">{batch.name}</span>
+                        <span className="text-gray-500 font-medium">{batch.completed}/{batch.total} ({batch.progress}%)</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className="bg-[#7E3A99] h-2 rounded-full transition-all duration-500" style={{ width: `${batch.progress}%` }}></div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2 p-6 absolute inset-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.125 2.25h-4.5c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125v-9M10.125 2.25h.375a9 9 0 0 1 9 9v.375M10.125 2.25A3.375 3.375 0 0 1 13.5 5.625v1.5c0 .621.504 1.125 1.125 1.125h1.5a3.375 3.375 0 0 1 3.375 3.375M9 15l2.25 2.25L15 12" />
+                      </svg>
+                      <span className="text-xs font-medium">No {activeBatchTab.toLowerCase()} batches</span>
+                    </div>
+                  )}
+                </div>
+              </>
+
+            ) : (
+
+              // ------------------------------------------
+              // PORTION 3: ADMIN (Mini Calendar)
+              // ------------------------------------------
+              <div className="flex flex-row h-full">
+                
+                {/* CALENDAR GRID (Left Side) */}
+                <div className="w-[55%] border-r border-gray-100 p-4 flex flex-col bg-white">
+                  <div className="flex justify-between items-center mb-4">
+                    <button onClick={prevMonth} className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-[#7E3A99] transition-colors">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <h2 className="text-[13px] font-bold text-gray-800 tracking-wide">
+                      {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                    </h2>
+                    <button onClick={nextMonth} className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-[#7E3A99] transition-colors">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  </div>
+                  
+                  {/* Days of week header */}
+                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 mb-2">
+                    <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                  </div>
+                  
+                  {/* Dates grid */}
+                  <div className="grid grid-cols-7 gap-1 text-center flex-1">
+                    {calendarDays.map((day, idx) => {
+                      if (!day) return <div key={idx}></div>;
+                      const cellDateStr = formatCalendarDateStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
+                      const isSelected = cellDateStr === selectedDateStr;
+                      const hasMeeting = adminMeetings.some(m => m.date === cellDateStr);
+                      const isToday = cellDateStr === formatCalendarDateStr(new Date());
+
+                      return (
+                        <button 
+                          key={idx} 
+                          onClick={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day))}
+                          className={`relative flex items-center justify-center text-xs rounded-lg transition-all duration-200
+                            ${isSelected ? 'bg-[#7E3A99] text-white font-bold shadow-md' : 'text-gray-700 hover:bg-gray-50'}
+                            ${isToday && !isSelected ? 'border border-[#7E3A99] text-[#7E3A99] font-bold' : ''}
+                          `}
+                        >
+                          <span className="z-10">{day}</span>
+                          {hasMeeting && (
+                            <span className={`absolute bottom-1 w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-green-500'}`}></span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* MEETINGS LIST (Right Side) */}
+                <div className="w-[45%] flex flex-col bg-gray-50/50 relative">
+                  <div className="p-4 border-b border-gray-100 flex-shrink-0 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+                    <h3 className="text-[13px] font-bold text-gray-800">
+                      {selectedDate.toLocaleDateString('default', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </h3>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-4 relative">
+                    <div className="space-y-3">
+                      {selectedDateMeetings.length > 0 ? selectedDateMeetings.map((m, i) => (
+                        <div key={i} className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow border-l-[3px] border-l-[#7E3A99] group">
+                          <p className="text-[10px] font-bold text-gray-400 mb-1 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            {m.time}
+                          </p>
+                          <p className="text-[13px] font-bold text-gray-800 leading-tight group-hover:text-[#7E3A99] transition-colors">{m.business}</p>
+                          <div className="mt-2">
+                            <span className="text-[10px] text-[#7E3A99] font-bold bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100/50">
+                              {m.type}
+                            </span>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="flex flex-col items-center justify-center text-gray-300 gap-2 pt-10">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+                          </svg>
+                          <span className="text-xs font-medium text-center px-4">No meetings scheduled</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
           </div>
 
         </div>
