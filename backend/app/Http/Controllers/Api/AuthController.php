@@ -78,4 +78,23 @@ class AuthController extends Controller
             ? response()->json(['message' => 'Your password has been reset!'], 200)
             : response()->json(['error' => 'Invalid token or email.'], 400);
     }
+
+    // --- 3. Change Password for Logged-In User ---
+    public function changePassword(Request $request, $id)
+    {
+        $request->validate([
+            'password' => 'required|min:8|confirmed', // Ensures 'password' and 'password_confirmation' match
+        ]);
+
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+        $user->save();
+
+        return response()->json(['message' => 'Password updated successfully!'], 200);
+    }
 }

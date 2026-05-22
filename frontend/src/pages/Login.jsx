@@ -33,9 +33,10 @@ export default function Login() {
       localStorage.setItem('AUTH_TOKEN', token);
       localStorage.setItem('USER_ROLE', user.role);
       localStorage.setItem('USER_NAME', user.name);
+      localStorage.setItem('USER_EMAIL', user.email);
       
       // THE FIX: We added this line to save the user's unique ID!
-      localStorage.setItem('USER_ID', user.id); 
+      localStorage.setItem('USER_ID', user.id);
 
       // 4. Redirect the user to the Leads page!
       navigate('/dashboard');

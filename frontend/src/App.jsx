@@ -9,6 +9,7 @@ import Employee_AssignedLeads from './pages/Employee_AssignedLeads';
 import MeetingsBooked from './pages/MeetingsBooked';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Account from './pages/Account';
 
 function App() {
   return (
@@ -25,6 +26,8 @@ function App() {
         <Route path="/assigned-leads" element={<AssignedLeads />} />
         <Route path="/employee-assigned-leads" element={<Employee_AssignedLeads />} />
         <Route path="/meetings-booked" element={<MeetingsBooked />} />
+        <Route path="/account" element={<Account />} />
+        
       </Routes>
     </Router>
   );

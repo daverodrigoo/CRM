@@ -41,3 +41,4 @@ Route::get('/meetings/all-booked', [App\Http\Controllers\Api\LeadController::cla
 Route::put('/leads/{id}', [LeadController::class, 'update']);
 Route::put('/leads/{id}/pipeline', [LeadController::class, 'updatePipeline']);
 Route::get('/leads/{id}/history', [LeadController::class, 'getLeadHistory']);
+Route::put('/users/{id}/change-password', [\App\Http\Controllers\Api\AuthController::class, 'changePassword']);

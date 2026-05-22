@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import { useState, useRef, useEffect } from 'react';
 
 // Smart function to properly extract the role from your Login.jsx session
 const getStoredRole = () => {
@@ -87,6 +88,20 @@ export default function Navbar() {
 
   const navItems = getNavItems();
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const isItemActive = (item) => {
     if (location.pathname === item.path) return true;
     if (item.dropdown && item.dropdown.some(sub => location.pathname === sub.path)) return true;
@@ -97,6 +112,7 @@ export default function Navbar() {
     localStorage.removeItem('AUTH_TOKEN');
     localStorage.removeItem('USER_ROLE');
     localStorage.removeItem('USER_NAME');
+    localStorage.removeItem('USER_EMAIL');
     localStorage.removeItem('USER_ID');
     localStorage.removeItem('user');
     navigate('/');
@@ -154,11 +170,35 @@ export default function Navbar() {
         ))}
       </ul>
 
-      <div className="flex-1 flex items-center justify-end">
-        <button onClick={handleLogout} className="bg-[#7E3A99] hover:bg-[#19a828] text-white uppercase tracking-widest rounded-full px-8 py-2.5 text-xs font-bold transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5">
-          LOGOUT
-        </button>
-      </div>
+      {/* Profile Dropdown */}
+          <div className="flex-1 flex items-center justify-end" ref={dropdownRef}>
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-10 h-10 rounded-full bg-[#7E3A99] text-white flex items-center justify-center font-bold shadow-sm hover:bg-[#6c3182] transition-colors outline-none focus:ring-2 focus:ring-purple-300"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+              </svg>
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute right-0 top-[70%] mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 animate-fade-in-down">
+                <Link 
+                  to="/account" 
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-[#7E3A99] transition-colors font-medium"
+                >
+                  My Account
+                </Link>
+                <button 
+                  onClick={handleLogout} /* Replace handleLogout with your exact logout function name if it's different */
+                  className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
       
     </nav>
   );
