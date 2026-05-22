@@ -138,6 +138,7 @@ export default function Meeting() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState('10');
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [activeTab, setActiveTab] = useState('Incomplete');
 
   // --- VIEW MODAL STATES (Copied exactly from Employee_AssignedLeads) ---
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -167,13 +168,31 @@ export default function Meeting() {
     }
   };
 
-  // Pagination Setup
-  const totalItems = meetings.length;
+  // Filter Setup (Applies before pagination)
+  const filteredMeetings = meetings.filter(lead => {
+    if (activeTab === 'All') return true;
+    
+    // 1. Bulletproof check for "Completed" (Catches booleans, int 1, string '1', and string 'true')
+    const compVal = lead.Meeting_Completed;
+    const isCompleted = compVal === true || compVal === 1 || String(compVal) === '1' || String(compVal).toLowerCase() === 'true';
+    
+    // 2. Strict check for "Deal Closed" (Ensures it is exactly one of your valid options, ignoring case/spaces)
+    const dealVal = lead.Deal_Closed ? String(lead.Deal_Closed).trim().toLowerCase() : '';
+    const hasDealClosed = ['yes', 'no', 'meeting'].includes(dealVal);
+    
+    const isFullyProcessed = isCompleted && hasDealClosed;
+    
+    // Incomplete tab keeps anything that is NOT fully processed
+    return !isFullyProcessed; 
+  });
+
+  // Pagination Setup (use filtered list so tabs respect filtering)
+  const totalItems = filteredMeetings.length;
   const actualItemsPerPage = itemsPerPage === 'All' ? totalItems : parseInt(itemsPerPage, 10);
   const totalPages = actualItemsPerPage > 0 ? Math.ceil(totalItems / actualItemsPerPage) : 1;
-  const startIndex = (currentPage - 1) * actualItemsPerPage;
-  const endIndex = itemsPerPage === 'All' ? totalItems : Math.min(startIndex + actualItemsPerPage, totalItems);
-  const currentMeetings = meetings.slice(startIndex, endIndex);
+  const startIndex = (currentPage - 1) * (actualItemsPerPage || 1);
+  const endIndex = itemsPerPage === 'All' ? totalItems : Math.min(startIndex + (actualItemsPerPage || totalItems), totalItems);
+  const currentMeetings = filteredMeetings.slice(startIndex, endIndex);
 
   // --- MODAL HANDLERS ---
   const fetchLeadHistory = async (leadId) => {
@@ -268,8 +287,28 @@ export default function Meeting() {
       <Navbar />
       
       <main className="pt-28 px-8 pb-12 max-w-[98%] mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h1 className="text-2xl font-bold text-gray-800">My Meetings</h1>
+
+          {/* TAB SWITCHER */}
+          <div className="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+            <button
+              onClick={() => { setActiveTab('Incomplete'); setCurrentPage(1); }}
+              className={`px-6 py-2 rounded-md text-sm font-bold transition-all outline-none ${
+                activeTab === 'Incomplete' ? 'bg-[#7E3A99] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Incomplete
+            </button>
+            <button
+              onClick={() => { setActiveTab('All'); setCurrentPage(1); }}
+              className={`px-6 py-2 rounded-md text-sm font-bold transition-all outline-none ${
+                activeTab === 'All' ? 'bg-[#7E3A99] text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              All
+            </button>
+          </div>
         </div>
 
         {/* --- MAIN TABLE --- */}
