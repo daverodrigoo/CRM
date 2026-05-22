@@ -182,7 +182,7 @@ export default function Navbar() {
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 top-[70%] mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 animate-fade-in-down">
+              <div className="absolute right-0 top-[70%] mt-2 w-30 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 animate-fade-in-down">
                 <Link 
                   to="/account" 
                   onClick={() => setIsDropdownOpen(false)}

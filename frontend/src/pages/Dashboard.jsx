@@ -412,7 +412,7 @@ export default function Dashboard() {
         <div className="w-full lg:w-1/2 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 h-full overflow-hidden">
           
           <div className="bg-[#7E3A99] px-5 py-4 flex-shrink-0">
-            <h2 className="text-lg font-bold text-white tracking-wide">CRM KPI</h2>
+            <h2 className="text-lg font-bold text-white tracking-wide">Hello, {localStorage.getItem('USER_NAME') || 'User'}!</h2>
           </div>
 
           <div className="bg-white border-b border-gray-100 px-5 py-3 flex flex-row flex-wrap items-center gap-6 flex-shrink-0">
