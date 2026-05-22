@@ -142,6 +142,7 @@ class LeadController extends Controller
                 'Tab_Category'    => $request->Tab_Category ?? '',
                 'Solution_Needed' => $request->Solution_Needed ?? '',
                 'Remarks'         => $request->Remarks ?? '',
+                'User_ID'         => $request->User_ID ?? $request->user_id ?? null,
             ]);
 
             // Create Social Media Records

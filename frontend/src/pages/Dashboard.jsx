@@ -75,74 +75,132 @@ export default function Dashboard() {
   }, []);
 
   // 2. THE CALCULATION ENGINE
+  // 2. THE CALCULATION ENGINE
   useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); 
+    // ---------------------------------------------------------
+    // THE TIMEZONE-AWARE DATE ENGINE
+    // ---------------------------------------------------------
     
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    // Helper 1: Formats any valid JS Date into a strict "YYYY-MM-DD" local string
+    const formatToDateString = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-    // --- A. CALCULATE LEADS ADDED ---
-    let addedToday = 0, addedWeek = 0, addedMonth = 0;
+    // Helper 2: The Timezone Converter
+    const getLocalYYYYMMDD = (rawDbDate) => {
+      if (!rawDbDate) return null;
+      let str = String(rawDbDate);
+
+      // 1. If it's already a clean flat date (YYYY-MM-DD) with no time, trust it blindly
+      if (str.length === 10 && str.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return str;
+      }
+
+      // 2. If it contains a SQL time (e.g. "2026-05-21 23:00:00"), convert it to an ISO format
+      if (str.includes(' ')) {
+        str = str.replace(' ', 'T');
+        // If the server didn't provide a timezone, assume UTC (Laravel's default)
+        if (!str.endsWith('Z')) str += 'Z'; 
+      }
+
+      // 3. Let the browser convert the UTC server time into your local Philippines time!
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        return formatToDateString(d); // Returns the corrected YYYY-MM-DD
+      }
+
+      // 4. Absolute Fallback: Just scrape the numbers
+      const match = str.match(/(\d{4}-\d{2}-\d{2})/);
+      return match ? match : null;
+    };
+
+    // Determine the exact Local boundaries for the chosen filter
+    const now = new Date();
+    let filterStart = '0000-00-00';
+    let filterEnd = '9999-12-31';
+
+    if (timeFilter === 'Today') {
+      const todayStr = formatToDateString(now);
+      filterStart = todayStr;
+      filterEnd = todayStr;
+    } else if (timeFilter === 'This Week') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+      filterStart = formatToDateString(startOfWeek);
+      filterEnd = formatToDateString(endOfWeek);
+    } else if (timeFilter === 'This Month') {
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+      filterStart = `${year}-${month}-01`;
+      filterEnd = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+    } else if (timeFilter === 'Custom Date Range') {
+      filterStart = customStartDate || '0000-00-00';
+      filterEnd = customEndDate || '9999-12-31';
+    }
+
+    // Universal checker: Pure alphabetical string comparison
+    const isDateInRange = (rawDbDate) => {
+      const cleanDate = getLocalYYYYMMDD(rawDbDate);
+      if (!cleanDate) return false;
+      return cleanDate >= filterStart && cleanDate <= filterEnd;
+    };
+
+    // ---------------------------------------------------------
+    // A. CALCULATE LEADS ADDED
+    // ---------------------------------------------------------
+    let leadsAddedCount = 0;
+
     rawLeads.forEach(lead => {
-      const leadOwnerId = String(lead.User_ID || lead.user_id || lead.Employee_ID || '');
+      const ownerId = String(lead.User_ID || lead.user_id || '');
       let includeLead = false;
 
-      if (userRole === 'Admin') {
-        includeLead = true; 
-      } else if (userRole === 'Super Admin') {
-        if (userFilter === 'All Users') {
-          includeLead = true;
-        } else {
-          includeLead = leadOwnerId === String(userFilter);
-        }
+      if (userRole === 'Admin') includeLead = true;
+      else if (userRole === 'Super Admin') {
+        includeLead = (userFilter === 'All Users' || ownerId === String(userFilter));
       } else {
-        includeLead = leadOwnerId === String(currentUserId);
+        includeLead = (ownerId === String(currentUserId));
+      }
+
+      // Fallback for leads with empty User_ID
+      if (!includeLead) {
+        const isAssigned = rawMyAssigned.some(b => b.leads.some(l => String(l.Lead_ID) === String(lead.Lead_ID)));
+        if (isAssigned) includeLead = true;
       }
 
       if (!includeLead) return;
-      
-      const dStr = lead.Acquisition_Date || lead.created_at || lead.Date_Added;
-      if (!dStr) return;
-      
-      const d = new Date(dStr);
-      if (isNaN(d.getTime())) return; 
-      
-      d.setHours(0, 0, 0, 0);
 
-      if (d.getTime() === today.getTime()) addedToday++;
-      if (d >= startOfWeek) addedWeek++;
-      if (d >= startOfMonth) addedMonth++;
+      // Filter using the timezone-aware string checker
+      if (isDateInRange(lead.Date_Added || lead.created_at)) {
+        leadsAddedCount++;
+      }
     });
 
-    // --- B. FLATTEN KPI DATA & GENERATE STRICT NOTIFICATIONS ---
+    // ---------------------------------------------------------
+    // B. FLATTEN KPI DATA & GENERATE STRICT NOTIFICATIONS
+    // ---------------------------------------------------------
     let kpiLeads = [];
     let generatedNotifications = [];
 
     if (userRole === 'Super Admin' || userRole === 'Admin') {
       rawSummary.forEach(userGroup => {
         const batchOwnerId = userGroup.User_ID;
-
-        // KPI Filter Logic
         let includeUserForKPI = false;
-        if (userRole === 'Admin') {
-          includeUserForKPI = true; 
-        } else {
-          if (userFilter === 'All Users') {
-            includeUserForKPI = true;
-          } else {
-            includeUserForKPI = String(batchOwnerId) === String(userFilter);
-          }
+        
+        if (userRole === 'Admin') includeUserForKPI = true; 
+        else {
+          includeUserForKPI = (userFilter === 'All Users' || String(batchOwnerId) === String(userFilter));
         }
 
         userGroup.Batches.forEach(batch => {
           batch.Leads.forEach(lead => {
             const assignId = lead.Assigned_Lead_ID || lead.id;
             
-            // --- SIMPLE NOTIFICATION LOGIC ---
-            // 1. "New Lead Assigned" - Triggered if you are the original Batch Owner
             if (String(batchOwnerId) === String(currentUserId)) {
               if (lead.Date_Assigned || lead.created_at) {
                 generatedNotifications.push({
@@ -150,26 +208,22 @@ export default function Dashboard() {
                   type: 'assigned',
                   title: 'New Lead Assigned',
                   message: `You were assigned a new lead: ${lead.Business_Name}`,
-                  _sortTime: new Date(lead.Date_Assigned || lead.created_at).getTime()
+                  _sortTime: new Date(lead.Date_Assigned || lead.created_at).getTime() || 0
                 });
               }
             }
 
-            // 2. "Meeting Booked!" - Triggered ONLY if you are the Assigned_To person
             const isBooked = lead.Meeting_Date != null && lead.Meeting_Date !== '';
-            const meetingAssignee = lead.Meeting_Assigned_to;
-
-            if (isBooked && String(meetingAssignee) === String(currentUserId)) {
+            if (isBooked && String(lead.Meeting_Assigned_to) === String(currentUserId)) {
               generatedNotifications.push({
                 id: `meet-${assignId}`, 
                 type: 'meeting',
                 title: 'Meeting Booked!',
                 message: `A meeting was booked with ${lead.Business_Name}`,
-                _sortTime: new Date(lead.updated_at || lead.Date_Assigned || new Date()).getTime()
+                _sortTime: new Date(lead.updated_at || lead.Date_Assigned || new Date()).getTime() || 0
               });
             }
 
-            // --- KPI LOGIC ---
             if (includeUserForKPI && lead.Completed) {
               kpiLeads.push(lead); 
             }
@@ -177,9 +231,7 @@ export default function Dashboard() {
         });
       });
     } else {
-      // Employees Logic
       rawMyAssigned.forEach(batch => {
-        const batchOwnerId = currentUserId; 
         batch.leads.forEach(lead => {
           const assignId = lead.Assigned_Lead_ID || lead.id;
           
@@ -189,20 +241,18 @@ export default function Dashboard() {
               type: 'assigned',
               title: 'New Lead Assigned',
               message: `You were assigned a new lead: ${lead.Business_Name}`,
-              _sortTime: new Date(lead.Date_Assigned || lead.created_at).getTime()
+              _sortTime: new Date(lead.Date_Assigned || lead.created_at).getTime() || 0
             });
           }
 
           const isBooked = lead.Meeting_Date != null && lead.Meeting_Date !== '';
-          const meetingAssignee = lead.Meeting_Assigned_to;
-
-          if (isBooked && String(meetingAssignee) === String(currentUserId)) {
+          if (isBooked && String(lead.Meeting_Assigned_to) === String(currentUserId)) {
             generatedNotifications.push({
               id: `meet-${assignId}`, 
               type: 'meeting',
               title: 'Meeting Booked!',
               message: `A meeting was booked with ${lead.Business_Name}`,
-              _sortTime: new Date(lead.updated_at || lead.Date_Assigned || new Date()).getTime()
+              _sortTime: new Date(lead.updated_at || lead.Date_Assigned || new Date()).getTime() || 0
             });
           }
 
@@ -211,33 +261,17 @@ export default function Dashboard() {
       });
     }
 
-    // Sort newest first based on background timestamps
-    generatedNotifications.sort((a, b) => (b._sortTime || 0) - (a._sortTime || 0));
+    generatedNotifications.sort((a, b) => b._sortTime - a._sortTime);
     setNotifications(generatedNotifications);
 
-    // --- C. APPLY TIME FILTER TO KPIS ---
-    kpiLeads = kpiLeads.filter(lead => {
-      const dStr = lead.Date_Assigned || lead.updated_at;
-      if (!dStr) return true;
-      
-      const d = new Date(dStr);
-      d.setHours(0, 0, 0, 0);
+    // ---------------------------------------------------------
+    // C. APPLY TIME FILTER TO KPIS
+    // ---------------------------------------------------------
+    kpiLeads = kpiLeads.filter(lead => isDateInRange(lead.Date_Assigned || lead.updated_at));
 
-      if (timeFilter === 'Today') return d.getTime() === today.getTime();
-      if (timeFilter === 'This Week') return d >= startOfWeek;
-      if (timeFilter === 'This Month') return d >= startOfMonth;
-      if (timeFilter === 'Custom Date Range') {
-        if (!customStartDate || !customEndDate) return true;
-        const start = new Date(customStartDate);
-        start.setHours(0,0,0,0);
-        const end = new Date(customEndDate);
-        end.setHours(23, 59, 59, 999);
-        return d >= start && d <= end;
-      }
-      return true;
-    });
-
-    // --- D. CALCULATE FINAL RATES & COUNTS ---
+    // ---------------------------------------------------------
+    // D. CALCULATE FINAL RATES & COUNTS
+    // ---------------------------------------------------------
     let callsSent = 0, emailsSent = 0, msgsSent = 0;
     let callsAns = 0, emailsRep = 0, msgsRep = 0;
     let totalBooked = 0;
@@ -264,9 +298,7 @@ export default function Dashboard() {
     const calcRate = (part, whole) => whole > 0 ? Math.round((part / whole) * 100) + '%' : '0%';
 
     setKpiData({
-      leadsToday: addedToday,
-      leadsWeek: addedWeek,
-      leadsMonth: addedMonth,
+      leadsAdded: leadsAddedCount,
       answerRateCall: calcRate(callsAns, callsSent),
       replyRateEmail: calcRate(emailsRep, emailsSent),
       answerRateMsg: calcRate(msgsRep, msgsSent),
@@ -278,9 +310,7 @@ export default function Dashboard() {
   }, [rawLeads, rawSummary, rawMyAssigned, usersList, userFilter, timeFilter, customStartDate, customEndDate, userRole, currentUserId]);
 
   const kpiMetrics = [
-    { label: "Leads Added Today", value: kpiData.leadsToday },
-    { label: "Leads This Week", value: kpiData.leadsWeek },
-    { label: "Leads This Month", value: kpiData.leadsMonth },
+    { label: "Leads Added", value: kpiData.leadsAdded },
     { label: "Answer Rate (Cold Call)", value: kpiData.answerRateCall },
     { label: "Reply Rate (Email)", value: kpiData.replyRateEmail },
     { label: "Answer Rate (Message)", value: kpiData.answerRateMsg },
