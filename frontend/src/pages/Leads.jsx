@@ -754,7 +754,7 @@ const confirmAssign = async () => {
               className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7E3A99] focus:border-transparent text-sm w-64 shadow-sm"
             />
             <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-            <button onClick={handleImportClick} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md font-medium transition-colors shadow-sm text-sm">Import</button>
+            <button onClick={handleImportClick} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md font-medium transition-colors shadow-sm text-sm">Import csv</button>
             <button 
               onClick={handleDownloadTemplate} 
               title="Download Template" 
